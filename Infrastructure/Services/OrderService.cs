@@ -2,7 +2,9 @@
 using Application.interfaces;
 using Domain.Entities;
 using Domain.Interfaces;
+using Infrastructure.Messaging.Contracts;
 using MassTransit;
+using MassTransit.Transports;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services
@@ -33,7 +35,7 @@ namespace Infrastructure.Services
                 
 
 
-                await _publish.Publish(request);
+                await _publish.Publish(new OrderIngestedMessage { MsgContext = request });
 
 
 
