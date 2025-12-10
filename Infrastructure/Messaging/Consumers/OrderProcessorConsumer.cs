@@ -29,31 +29,20 @@ public class OrderProcessorConsumer : IConsumer<OrderIngestedMessage>
         var msg = context.Message.MsgContext;
         _logger.LogInformation("Consuming message {RequestId} OrderId:{OrderId}", msg.RequestId, msg.OrderId);
 
-        // Check for duplicate requests (idempotency)
-        var existingOrder = await _repo.CheckIdempotencyAsync(msg.RequestId);
-        if (existingOrder != null)
-        {
-            _logger.LogInformation("Duplicate request detected. Returning existing order. RequestId: {RequestId}, OrderId: {OrderId}",
-                msg.RequestId, existingOrder.OrderId);
-            return;
-        }
-
-
         // map payload to domain (simple demo)
         var json = JsonSerializer.Serialize(msg);
         var order = JsonSerializer.Deserialize<Order>(json)!;
 
-        //// persist raw payload for audit
-        //await _repo.SaveRawPayloadAsync(order);
-
         try
         {
-
             // Create the order
             await _repo.CreateOrderAsync(order);
             _logger.LogInformation("Order persisted {Id}", order.OrderId);
 
+            //Simulate a call to a third-party Logistics Gateway
+            _logger.LogInformation("Simulate a call to a third-party Logistics Gateway");
             await _logistics.NotifyLogisticsAsync(order.OrderId, order.RequestId);
+
             await context.RespondAsync(new CreateOrderResponse { Status = "Order forwarded to logistics" });
         }
         catch (DbUpdateException dbex)

@@ -9,10 +9,19 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((ctx, lc) =>
-    lc.WriteTo.Console()
-      .MinimumLevel.Debug()
-);
+//Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug() // logs Information, Debug, Error, etc.
+    .WriteTo.Console()    // optional: console logging
+    .WriteTo.File(
+        path: "Logs/order-ingestion-.log", // log file path
+        rollingInterval: RollingInterval.Day, // create a new file daily
+        retainedFileCountLimit: 30, // keep last 30 log files
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"
+    )
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 // Register Layers
 //builder.Services.AddApplication();

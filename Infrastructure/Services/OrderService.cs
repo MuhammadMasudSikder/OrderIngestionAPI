@@ -3,6 +3,7 @@ using Application.interfaces;
 using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Messaging.Contracts;
+using Infrastructure.Repositories;
 using MassTransit;
 using MassTransit.Transports;
 using Microsoft.Extensions.Logging;
@@ -11,18 +12,18 @@ namespace Infrastructure.Services
 {
     public class OrderService : IOrderService
     {
-        private readonly ILogisticsGateway _logisticsGateway;
         private readonly ILogger<OrderService> _logger;
         private readonly IPublishEndpoint _publish;
+        private readonly IOrderRepository _repo;
 
-        public OrderService(
+        public OrderService(IOrderRepository repo,
             IPublishEndpoint publish,
             IOrderRepository orderRepository,
             ILogisticsGateway logisticsGateway,
             ILogger<OrderService> logger)
         {
+            _repo = repo;
             _publish = publish;
-            _logisticsGateway = logisticsGateway;
             _logger = logger;
         }
 
@@ -32,6 +33,25 @@ namespace Infrastructure.Services
             {
                 _logger.LogInformation("Processing order creation request. RequestId: {RequestId}", request.RequestId);
 
+                //Check if order already exists (idempotency)
+                var existingOrder = await _repo.CheckIdempotencyAsync(request.RequestId);
+                if (existingOrder != null)
+                {
+                    _logger.LogInformation("Duplicate request detected. Returning existing order. RequestId: {RequestId}, OrderId: {OrderId}",
+                        request.RequestId, existingOrder.OrderId);
+
+                    return new CreateOrderResponse
+                    {
+                        OrderId = existingOrder.OrderId,
+                        RequestId = existingOrder.RequestId,
+                        Status = existingOrder.Status,
+                        TotalAmount = existingOrder.TotalAmount,
+                        OrderDate = existingOrder.OrderDate,
+                        Message = "Order already processed (idempotent request)"
+                    };
+                }
+
+                // 2. If not exists, create new order
                 await _publish.Publish(new OrderIngestedMessage { MsgContext = request });
 
                 _logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}",
@@ -46,6 +66,24 @@ namespace Infrastructure.Services
                     OrderDate = request.OrderDate,
                     Message = "Order created successfully"
                 };
+
+
+                //_logger.LogInformation("Processing order creation request. RequestId: {RequestId}", request.RequestId);
+
+                //await _publish.Publish(new OrderIngestedMessage { MsgContext = request });
+
+                //_logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}",
+                //    request.OrderId, request.RequestId);
+
+                //return new CreateOrderResponse
+                //{
+                //    OrderId = request.OrderId,
+                //    RequestId = request.RequestId,
+                //    Status = request.Status,
+                //    TotalAmount = request.TotalAmount,
+                //    OrderDate = request.OrderDate,
+                //    Message = "Order created successfully"
+                //};
             }
             catch (Exception ex)
             {

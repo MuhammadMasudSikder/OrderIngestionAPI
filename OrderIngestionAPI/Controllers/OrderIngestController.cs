@@ -11,10 +11,12 @@ namespace OrderIngestionAPI.Controllers;
 public class OrderIngestController : ControllerBase
 {
     private readonly IOrderService _orderService; // From Application Layer
+    private readonly ILogger<OrderIngestController> _logger;
 
-    public OrderIngestController(IOrderService orderService)
+    public OrderIngestController(IOrderService orderService, ILogger<OrderIngestController> logger)
     {
         _orderService = orderService;
+        _logger = logger;
     }
 
     [HttpPost]
@@ -22,11 +24,17 @@ public class OrderIngestController : ControllerBase
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest payload)
     {
         if (payload == null)
+        {
+            _logger.LogWarning("Received null payload for order creation.");
             return BadRequest("Payload cannot be null.");
+        }
+
+        _logger.LogInformation("Received order creation request. RequestId: {RequestId}, Platform: {Platform}",
+            payload.RequestId, payload.Platform);
 
         try
         {
-            //Converting DTO to Domain Entity internal Order instance
+            // Converting DTO to Domain Entity
             var order = new Order
             {
                 RequestId = payload.RequestId,
@@ -47,16 +55,29 @@ public class OrderIngestController : ControllerBase
                 }).ToList()
             };
 
+            _logger.LogInformation("Creating order. RequestId: {RequestId}, ItemCount: {ItemCount}",
+                payload.RequestId, order.Items.Count);
+
             var result = await _orderService.CreateOrderAsync(order);
 
             if (result.IsSuccess)
+            {
+                _logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}, TotalAmount: {TotalAmount}",
+                    result.OrderId, result.RequestId, result.TotalAmount);
+
                 return Ok(result);
+            }
             else
-                return StatusCode(500, result); // internal server error for failed ingestion
+            {
+                _logger.LogError("Order creation failed. RequestId: {RequestId}, Reason: {Reason}",
+                    payload.RequestId, result.Status);
+
+                return StatusCode(500, result); // Internal server error
+            }
         }
         catch (Exception ex)
         {
-            // log the exception here if needed, e.g., _logger.LogError(ex, "Order ingestion failed.");
+            _logger.LogError(ex, "Exception occurred while processing order creation. RequestId: {RequestId}", payload.RequestId);
 
             var errorResponse = new CreateOrderResponse
             {
@@ -69,5 +90,4 @@ public class OrderIngestController : ControllerBase
             return StatusCode(500, errorResponse);
         }
     }
-
 }
