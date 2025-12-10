@@ -3,6 +3,7 @@ using Application.interfaces;
 using Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrderIngestionAPI.Validators;
 
 namespace OrderIngestionAPI.Controllers;
 
@@ -23,6 +24,21 @@ public class OrderIngestController : ControllerBase
     //[Authorize] // triggers the JWT middleware
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest payload)
     {
+        var validator = new OrderIngestRequestValidator();
+        var resultValidator = await validator.ValidateAsync(payload);
+
+        if (!resultValidator.IsValid)
+        {
+            foreach (var error in resultValidator.Errors)
+            {
+                _logger.LogWarning("Validation failed: {Property} - {ErrorCode} - {ErrorMessage}",
+                    error.PropertyName, error.ErrorCode, error.ErrorMessage);
+            }
+
+            return BadRequest(resultValidator.Errors);
+        }
+
+        //Checking payload
         if (payload == null)
         {
             _logger.LogWarning("Received null payload for order creation.");

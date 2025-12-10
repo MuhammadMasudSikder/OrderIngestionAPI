@@ -42,6 +42,7 @@ namespace Infrastructure.Services
 
                     return new CreateOrderResponse
                     {
+                        IsSuccess = false,
                         OrderId = existingOrder.OrderId,
                         RequestId = existingOrder.RequestId,
                         Status = existingOrder.Status,
@@ -59,6 +60,7 @@ namespace Infrastructure.Services
 
                 return new CreateOrderResponse
                 {
+                    IsSuccess = true,
                     OrderId = request.OrderId,
                     RequestId = request.RequestId,
                     Status = request.Status,
