@@ -1,5 +1,6 @@
 ﻿using Application.interfaces;
 using Domain.Interfaces;
+using Humanizer.Configuration;
 using Infrastructure.Messaging.Consumers;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
@@ -20,11 +21,17 @@ namespace Infrastructure
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
         {
+            // Ensure API passes configuration
+            var connectionString = config.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new Exception("DefaultConnection string is missing!");
 
             // Register IDbConnection as scoped (per-request lifetime)
             services.AddScoped<IDbConnection>(sp =>
-                new SqlConnection(config.GetConnectionString("DefaultConnection")));
+                new SqlConnection(connectionString));
 
+            Console.WriteLine(connectionString);
+            Console.WriteLine(config["RabbitMQ:Host"]);
             // Repositories
             services.AddScoped<IOrderRepository, OrderRepository>();
 
@@ -50,7 +57,7 @@ namespace Infrastructure
 
                 x.UsingRabbitMq((context, cfg) =>
                 {
-                    cfg.Host(config["RabbitMQ:Host"] ?? "host.docker.internal", h =>
+                    cfg.Host(config["RabbitMQ:Host"] ?? "localhost", h =>
                     {
                         h.Username(config["RabbitMQ:Username"] ?? "guest");
                         h.Password(config["RabbitMQ:Password"] ?? "guest");

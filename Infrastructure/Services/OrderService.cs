@@ -32,12 +32,7 @@ namespace Infrastructure.Services
             {
                 _logger.LogInformation("Processing order creation request. RequestId: {RequestId}", request.RequestId);
 
-                
-
-
                 await _publish.Publish(new OrderIngestedMessage { MsgContext = request });
-
-
 
                 _logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}",
                     request.OrderId, request.RequestId);
