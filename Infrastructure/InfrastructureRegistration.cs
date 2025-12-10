@@ -30,8 +30,9 @@ namespace Infrastructure
             services.AddScoped<IDbConnection>(sp =>
                 new SqlConnection(connectionString));
 
-            Console.WriteLine(connectionString);
-            Console.WriteLine(config["RabbitMQ:Host"]);
+            //Console.WriteLine(connectionString);
+            //Console.WriteLine(config["RabbitMQ:Host"]);
+
             // Repositories
             services.AddScoped<IOrderRepository, OrderRepository>();
 

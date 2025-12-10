@@ -43,8 +43,8 @@ public class OrderProcessorConsumer : IConsumer<OrderIngestedMessage>
         var json = JsonSerializer.Serialize(msg);
         var order = JsonSerializer.Deserialize<Order>(json)!;
 
-        // persist raw payload for audit
-        await _repo.SaveRawPayloadAsync(order);
+        //// persist raw payload for audit
+        //await _repo.SaveRawPayloadAsync(order);
 
         try
         {
