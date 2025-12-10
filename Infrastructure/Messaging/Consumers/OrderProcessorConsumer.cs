@@ -1,10 +1,12 @@
-using MassTransit;
-using Infrastructure.Messaging.Contracts;
-using Domain.Interfaces;
+using Application.DTOs;
 using Domain.Entities;
-using Microsoft.Extensions.Logging;
+using Domain.Interfaces;
+using Infrastructure.Messaging.Contracts;
+using Infrastructure.Repositories;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using Application.Contracts;
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Infrastructure.Messaging.Consumers;
 
@@ -14,7 +16,7 @@ public class OrderProcessorConsumer : IConsumer<OrderIngestedMessage>
     private readonly ILogger<OrderProcessorConsumer> _logger;
     private readonly ILogisticsGateway _logistics;
 
-    public OrderProcessorConsumer(IOrderRepository repo, ILogger<OrderProcessorConsumer> logger, ILogisticsGateway logistics    )
+    public OrderProcessorConsumer(IOrderRepository repo, ILogger<OrderProcessorConsumer> logger, ILogisticsGateway logistics)
     {
         _repo = repo;
         _logger = logger;
@@ -24,40 +26,44 @@ public class OrderProcessorConsumer : IConsumer<OrderIngestedMessage>
 
     public async Task Consume(ConsumeContext<OrderIngestedMessage> context)
     {
-        var msg = context.Message;
-        _logger.LogInformation("Consuming message {CorrelationId} ExternalId:{ExternalId}", msg.CorrelationId, msg.ExternalOrderId);
+        var msg = context.Message.MsgContext;
+        _logger.LogInformation("Consuming message {RequestId} OrderId:{OrderId}", msg.RequestId, msg.OrderId);
 
-        if (await _repo.ExistsByExternalIdAsync(msg.ExternalOrderId, msg.Source))
+        // Check for duplicate requests (idempotency)
+        var existingOrder = await _repo.CheckIdempotencyAsync(msg.RequestId);
+        if (existingOrder != null)
         {
-            _logger.LogInformation("Duplicate detected. Ignoring. {ExternalId}", msg.ExternalOrderId);
+            _logger.LogInformation("Duplicate request detected. Returning existing order. RequestId: {RequestId}, OrderId: {OrderId}",
+                msg.RequestId, existingOrder.OrderId);
             return;
         }
 
+
         // map payload to domain (simple demo)
-        var order = new Order
-        {
-            ExternalOrderId = msg.ExternalOrderId,
-            Source = msg.Source,
-            CorrelationId = msg.CorrelationId,
-            CreatedAt = msg.IngestedAt
-        };
+        var json = JsonSerializer.Serialize(msg);
+        var order = JsonSerializer.Deserialize<Order>(json)!;
+
+        // persist raw payload for audit
+        await _repo.SaveRawPayloadAsync(order);
 
         try
         {
-            await _repo.AddAsync(order);
-            _logger.LogInformation("Order persisted {Id}", order.Id);
 
-            await _logistics.SendToLogisticsAsync(context.Message.ExternalOrderId);
-            await context.RespondAsync(new OrderIngestResponse { Status = "Order forwarded to logistics" });
+            // Create the order
+            await _repo.CreateOrderAsync(order);
+            _logger.LogInformation("Order persisted {Id}", order.OrderId);
+
+            await _logistics.NotifyLogisticsAsync(order.OrderId, order.RequestId);
+            await context.RespondAsync(new CreateOrderResponse { Status = "Order forwarded to logistics" });
         }
         catch (DbUpdateException dbex)
         {
-            _logger.LogError(dbex, "DB error persisting order {ExternalId}", msg.ExternalOrderId);
+            _logger.LogError(dbex, "DB error persisting order {RequestId}", msg.RequestId);
             throw; // allow retry
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error processing order {ExternalId}", msg.ExternalOrderId);
+            _logger.LogError(ex, "Unexpected error processing order {RequestId}", msg.RequestId);
             throw;
         }
     }

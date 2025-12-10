@@ -1,13 +1,22 @@
 using FluentValidation;
+using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
-using System.Text;
 using OrderIngestionAPI.Middleware;
 using OrderIngestionAPI.Validators;
+using Serilog;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.UseSerilog((ctx, lc) =>
+    lc.WriteTo.Console()
+      .MinimumLevel.Debug()
+);
+
+// Register Layers
+//builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Host.UseSerilog((ctx, lc) => lc.WriteTo.Console());
 
@@ -66,15 +75,13 @@ var app = builder.Build();
 // Middlewares order matters
 // JWT authentication middleware runs here
 app.UseMiddleware<ErrorHandlingMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger(); // Enable Swagger middleware
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Order Ingestion API V1");
-        c.RoutePrefix = string.Empty; // Makes Swagger UI available at root "/"
-    });
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
+
 app.UseAuthentication();
 app.UseAuthorization();
 

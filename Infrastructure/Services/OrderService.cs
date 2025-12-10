@@ -1,75 +1,67 @@
-﻿using Application.Contracts;
-using Application.DTOs;
+﻿using Application.DTOs;
 using Application.interfaces;
 using Domain.Entities;
 using Domain.Interfaces;
-using Infrastructure.Messaging.Contracts;
 using MassTransit;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services
 {
     public class OrderService : IOrderService
     {
-        private readonly IOrderRepository _repo;
+        private readonly ILogisticsGateway _logisticsGateway;
+        private readonly ILogger<OrderService> _logger;
         private readonly IPublishEndpoint _publish;
 
-        public OrderService(IPublishEndpoint publish, IOrderRepository repo)
+        public OrderService(
+            IPublishEndpoint publish,
+            IOrderRepository orderRepository,
+            ILogisticsGateway logisticsGateway,
+            ILogger<OrderService> logger)
         {
             _publish = publish;
-            _repo = repo;
+            _logisticsGateway = logisticsGateway;
+            _logger = logger;
         }
 
-        public async Task<OrderIngestResponse> IngestOrderAsync(OrderIngestRequest dto)
+        public async Task<CreateOrderResponse> CreateOrderAsync(Order request)
         {
             try
             {
-                // generate correlation id
-                var corr = Guid.NewGuid();
+                _logger.LogInformation("Processing order creation request. RequestId: {RequestId}", request.RequestId);
 
-                // persist raw payload for audit
-                var raw = new OrderRaw
+                
+
+
+                await _publish.Publish(request);
+
+
+
+                _logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}",
+                    request.OrderId, request.RequestId);
+
+                return new CreateOrderResponse
                 {
-                    CorrelationId = corr,
-                    ExternalOrderId = dto.ExternalOrderId,
-                    Payload = dto.ToString(),
-                    IngestedAt = DateTime.UtcNow
-                };
-
-                await _repo.SaveRawPayloadAsync(raw);
-
-                // publish message to bus
-                var msg = new OrderIngestedMessage
-                {
-                    CorrelationId = corr,
-                    ExternalOrderId = dto.ExternalOrderId,
-                    Payload = dto.ToString(),
-                    IngestedAt = DateTime.UtcNow
-                };
-
-                await _publish.Publish(msg);
-
-                // return success response
-                return new OrderIngestResponse
-                {
-                    OrderId = dto.ExternalOrderId,
-                    IsSuccess = true,
-                    Status = "Accepted",
-                    ProcessedAt = DateTime.UtcNow
+                    OrderId = request.OrderId,
+                    RequestId = request.RequestId,
+                    Status = request.Status,
+                    TotalAmount = request.TotalAmount,
+                    OrderDate = request.OrderDate,
+                    Message = "Order created successfully"
                 };
             }
             catch (Exception ex)
             {
-                // log the exception if needed
+                _logger.LogError(ex, "Error processing order creation. RequestId: {RequestId}", request.RequestId);
                 // return failure response
-                return new OrderIngestResponse
+                return new CreateOrderResponse
                 {
-                    OrderId = dto.ExternalOrderId,
+                    RequestId = request.RequestId,
                     IsSuccess = false,
                     Status = $"Failed: {ex.Message}",
                     ProcessedAt = DateTime.UtcNow
                 };
             }
         }
-
     }
 }

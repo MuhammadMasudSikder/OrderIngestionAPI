@@ -1,16 +1,10 @@
-﻿using Application.Contracts;
-using Application.DTOs;
+﻿using Application.DTOs;
 using Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.interfaces
 {
     public interface IOrderService
     {
-        Task<OrderIngestResponse> IngestOrderAsync(OrderIngestRequest dto);
+        Task<CreateOrderResponse> CreateOrderAsync(Order request);
     }
 }

@@ -8,6 +8,6 @@ namespace Domain.Interfaces
 {
     public interface ILogisticsGateway
     {
-        Task<bool> SendToLogisticsAsync(string orderId);
+        Task<bool> NotifyLogisticsAsync(int orderId, string requestId);
     }
 }

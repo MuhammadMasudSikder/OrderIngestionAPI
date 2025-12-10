@@ -1,6 +1,6 @@
-using Application.Contracts;
 using Application.DTOs;
 using Application.interfaces;
+using Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,15 +18,36 @@ public class OrderIngestController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize] // triggers the JWT middleware
-    public async Task<IActionResult> Ingest([FromBody] OrderIngestRequest payload)
+    //[Authorize] // triggers the JWT middleware
+    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest payload)
     {
         if (payload == null)
             return BadRequest("Payload cannot be null.");
 
         try
         {
-            var result = await _orderService.IngestOrderAsync(payload);
+            //Converting DTO to Domain Entity internal Order instance
+            var order = new Order
+            {
+                RequestId = payload.RequestId,
+                Platform = payload.Platform,
+                Customer = payload.Customer != null ? new Customer
+                {
+                    Email = payload.Customer.Email,
+                    FirstName = payload.Customer.FirstName,
+                    LastName = payload.Customer.LastName,
+                    Phone = payload.Customer.Phone,
+                } : null,
+                Items = payload.Items.Select(i => new OrderItem
+                {
+                    ProductSku = i.ProductSku,
+                    ProductName = i.ProductName,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.UnitPrice,
+                }).ToList()
+            };
+
+            var result = await _orderService.CreateOrderAsync(order);
 
             if (result.IsSuccess)
                 return Ok(result);
@@ -37,12 +58,12 @@ public class OrderIngestController : ControllerBase
         {
             // log the exception here if needed, e.g., _logger.LogError(ex, "Order ingestion failed.");
 
-            var errorResponse = new OrderIngestResponse
+            var errorResponse = new CreateOrderResponse
             {
-                OrderId = payload.ExternalOrderId,
+                RequestId = payload.RequestId,
                 IsSuccess = false,
                 Status = $"Exception: {ex.Message}",
-                ProcessedAt = DateTime.UtcNow
+                OrderDate = DateTime.UtcNow
             };
 
             return StatusCode(500, errorResponse);
