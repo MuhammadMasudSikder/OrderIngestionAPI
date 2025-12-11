@@ -19,7 +19,7 @@ public class OrderRepository : IOrderRepository
         _logger = logger;
     }
 
-    public async Task<Order?> CheckIdempotencyAsync(string requestId,CancellationToken ct = default)
+    public async Task<Order?> CheckIdempotencyAsync(string requestId, CancellationToken ct = default)
     {
         try
         {
@@ -65,8 +65,7 @@ public class OrderRepository : IOrderRepository
 
             var itemsJson = JsonSerializer.Serialize(itemsWithTotal);
 
-            var parameters = new
-            {
+            var parameters = new {
                 RequestId = request.RequestId,
                 CustomerEmail = request.Customer.Email,
                 CustomerFirstName = request.Customer.FirstName,

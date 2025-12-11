@@ -53,7 +53,7 @@ namespace Infrastructure.Services
                 }
 
                 //If not exists, create new order
-                var newOrder= await _repo.CreateOrderAsync(request);
+                var newOrder = await _repo.CreateOrderAsync(request);
 
                 _logger.LogInformation("Order persisted {Id}", newOrder.OrderId);
 
