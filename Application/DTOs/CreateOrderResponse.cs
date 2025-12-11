@@ -9,7 +9,7 @@ public class CreateOrderResponse
     public decimal TotalAmount { get; set; }
     public DateTime OrderDate { get; set; }
     public string Message { get; set; } = "Order created successfully";
-    public DateTime ProcessedAt { get; set; }   
+    public DateTime ProcessedAt { get; set; }
 }
 
 public class ErrorResponse

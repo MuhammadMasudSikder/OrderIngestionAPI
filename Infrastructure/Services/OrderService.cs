@@ -73,24 +73,6 @@ namespace Infrastructure.Services
                     OrderDate = newOrder.OrderDate,
                     Message = "Order created successfully"
                 };
-
-
-                //_logger.LogInformation("Processing order creation request. RequestId: {RequestId}", request.RequestId);
-
-                //await _publish.Publish(new OrderIngestedMessage { MsgContext = request });
-
-                //_logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}",
-                //    request.OrderId, request.RequestId);
-
-                //return new CreateOrderResponse
-                //{
-                //    OrderId = request.OrderId,
-                //    RequestId = request.RequestId,
-                //    Status = request.Status,
-                //    TotalAmount = request.TotalAmount,
-                //    OrderDate = request.OrderDate,
-                //    Message = "Order created successfully"
-                //};
             }
             catch (Exception ex)
             {

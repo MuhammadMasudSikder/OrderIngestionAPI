@@ -4,5 +4,5 @@ namespace Infrastructure.Messaging.Contracts;
 
 public class OrderIngestedMessage
 {
-    public Order? MsgContext {get; set;}
+    public Order? MsgContext { get; set; }
 }

@@ -23,9 +23,6 @@ public class OrderRepository : IOrderRepository
     {
         try
         {
-            //using var connection = new SqlConnection(_connectionString);
-            //await connection.OpenAsync();
-
             var result = await _db.QueryAsync<dynamic>(
                 "CheckRequestIdempotency",
                 new { RequestId = requestId },
@@ -53,9 +50,6 @@ public class OrderRepository : IOrderRepository
     {
         try
         {
-            //using var connection = new SqlConnection(_connectionString);
-            //await connection.OpenAsync();
-
             // Calculate total amount
             var totalAmount = request.Items.Sum(item => item.Quantity * item.UnitPrice);
 
