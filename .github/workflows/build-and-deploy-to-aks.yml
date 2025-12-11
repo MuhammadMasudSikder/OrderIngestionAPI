@@ -3,7 +3,7 @@ name: Deploy to AKS (OrderIngestion API)
 on:
   push:
     branches:
-      - Master
+      - master
   workflow_dispatch:
 
 env:
