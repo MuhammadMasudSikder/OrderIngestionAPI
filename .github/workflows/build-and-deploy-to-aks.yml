@@ -66,10 +66,4 @@ jobs:
       - name: Check rollout status
         run: |
           kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }}
-
-      
-      # Deploy API to AKS  
-      #- name: Deploy API to AKS
-      #  run: |
-       #   kubectl set image deployment/orderingestion-api orderingestion-api=$ACR_LOGIN_SERVER/orderingestion-api:latest -n orderingestion-api-prod
-       #   kubectl rollout restart deployment orderingestion-api -n orderingestion-api-prod
+          
