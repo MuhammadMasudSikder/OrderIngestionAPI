@@ -52,7 +52,12 @@ namespace Infrastructure.Services
                     };
                 }
 
-                // 2. If not exists, create new order
+                //If not exists, create new order
+                var newOrder= await _repo.CreateOrderAsync(request);
+
+                _logger.LogInformation("Order persisted {Id}", newOrder.OrderId);
+
+                //Implement Asynchronous Processing through RabbitMQ, Simulate third-party API call with 2-second delay
                 await _publish.Publish(new OrderIngestedMessage { MsgContext = request });
 
                 _logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}",
@@ -61,11 +66,11 @@ namespace Infrastructure.Services
                 return new CreateOrderResponse
                 {
                     IsSuccess = true,
-                    OrderId = request.OrderId,
-                    RequestId = request.RequestId,
-                    Status = request.Status,
-                    TotalAmount = request.TotalAmount,
-                    OrderDate = request.OrderDate,
+                    OrderId = newOrder.OrderId,
+                    RequestId = newOrder.RequestId,
+                    Status = newOrder.Status,
+                    TotalAmount = newOrder.TotalAmount,
+                    OrderDate = newOrder.OrderDate,
                     Message = "Order created successfully"
                 };
 

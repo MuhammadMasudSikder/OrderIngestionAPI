@@ -35,9 +35,6 @@ public class OrderProcessorConsumer : IConsumer<OrderIngestedMessage>
 
         try
         {
-            // Create the order
-            await _repo.CreateOrderAsync(order);
-            _logger.LogInformation("Order persisted {Id}", order.OrderId);
 
             //Simulate a call to a third-party Logistics Gateway
             _logger.LogInformation("Simulate a call to a third-party Logistics Gateway");
