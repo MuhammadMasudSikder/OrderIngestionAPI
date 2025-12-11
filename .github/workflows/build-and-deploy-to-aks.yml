@@ -43,7 +43,7 @@ jobs:
           resource-group: ${{ env.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ env.AKS_CLUSTER_NAME }}
 
-      # 🔹 Deploy both apps to AKS
+      # 🔹 Deploy API to AKS
       - name: Deploy API & Client to AKS
         run: |
           kubectl set image deployment/orderingestion-api orderingestion-api=$ACR_LOGIN_SERVER/orderingestion-api:latest -n orderIngestion-api-prod
