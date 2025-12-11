@@ -350,7 +350,7 @@ for the docker container
 "ConnectionStrings": {
   "DefaultConnection": "Server=host.docker.internal,1433;Database=OrderIngestionDB;User Id=sa;Password=orion123@;TrustServerCertificate=True;"
 }
-for local box
+//for local box
 "ConnectionStrings": {
   "DefaultConnection": "Server=(local);Database=OrderIngestionDB;User Id=sa;Password=orion123@;TrustServerCertificate=True;"
 }
@@ -411,11 +411,22 @@ Sample JSON request:
 
 ```json
 {
-  "orderNumber": "ORD-1001",
-  "customerName": "Masud Sikder",
-  "product": "Laptop",
-  "quantity": 2,
-  "price": 1599.99
+  "requestId": "REQ-10023",
+  "customer": {
+    "email": "muhammadmasudsikder@gmail.com",
+    "firstName": "Masud",
+    "lastName": "Sikder",
+    "phone": "+8801731808906"
+  },
+  "platform": "Shopify",
+  "items": [
+    {
+      "productSku": "TSHIRT-BLK-L",
+      "productName": "Black T-Shirt (Large)",
+      "quantity": 2,
+      "unitPrice": 1500.00
+    }
+  ]
 }
 ```
 
@@ -423,8 +434,14 @@ Successful Response:
 
 ```json
 {
-  "status": "Success",
-  "orderId": 1
+  "orderId": 12,
+  "isSuccess": true,
+  "requestId": "REQ-10023",
+  "status": "Pending",
+  "totalAmount": 3000,
+  "orderDate": "2025-12-11T16:57:13.5033333",
+  "message": "Order created successfully",
+  "processedAt": "0001-01-01T00:00:00"
 }
 ```
 
