@@ -84,8 +84,6 @@ jobs:
         run: |
           kubectl get namespace ${{ env.NAMESPACE }} || kubectl create namespace ${{ env.NAMESPACE }}
 
-
-            
       # Apply deployment manifest
       - name: Apply deployment manifest
         run: |
@@ -100,3 +98,4 @@ jobs:
       - name: Check rollout status
         run: |
           kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }}
+          

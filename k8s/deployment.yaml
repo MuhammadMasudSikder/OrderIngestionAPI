@@ -171,3 +171,4 @@ spec:
                 name: orderingestion-api
                 port:
                   number: 80
+                  
