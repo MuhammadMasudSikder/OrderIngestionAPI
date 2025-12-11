@@ -19,18 +19,33 @@ This README includes:
   
 Example configuration snippet in Program.cs:
 ```
-builder.Services.AddMassTransit(x =>
+// MassTransit
+services.AddMassTransit(x =>
 {
-    x.UsingRabbitMq((context, cfg) =>
+    x.AddConsumer<OrderProcessorConsumer>(cfg =>
     {
-        cfg.Host("rabbitmq://localhost", h =>
-        {
-            h.Username("guest");
-            h.Password("guest");
-        });
+        cfg.UseMessageRetry(r => r.Exponential(
+            5,
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(30),
+            TimeSpan.FromSeconds(2)
+        ));
+        cfg.UseInMemoryOutbox();
     });
 
-    x.AddConsumer<OrderCreatedConsumer>();
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(config["RabbitMQ:Host"] ?? "localhost", h =>
+        {
+            h.Username(config["RabbitMQ:Username"] ?? "guest");
+            h.Password(config["RabbitMQ:Password"] ?? "guest");
+        });
+
+        cfg.ReceiveEndpoint("order-ingest-queue", ep =>
+        {
+            ep.ConfigureConsumer<OrderProcessorConsumer>(context);
+        });
+    });
 });
 ```
 
