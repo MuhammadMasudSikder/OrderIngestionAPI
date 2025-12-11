@@ -46,6 +46,9 @@ jobs:
           cluster-name: ${{ env.AKS_CLUSTER_NAME }}
 
       # Deploy API to AKS
+      - name: Create Namespace if not exists
+        run: |
+            kubectl get namespace orderingestion-api-prod || kubectl create namespace orderingestion-api-prod
       - name: Deploy API to AKS
         run: |
           kubectl set image deployment/orderingestion-api orderingestion-api=$ACR_LOGIN_SERVER/orderingestion-api:latest -n orderingestion-api-prod
