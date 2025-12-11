@@ -30,6 +30,7 @@ public class OrderRepository : IOrderRepository
             );
 
             var idempotencyRecord = result.FirstOrDefault();
+
             if (idempotencyRecord != null)
             {
                 _logger.LogInformation("Duplicate request detected: {RequestId}", requestId);
@@ -66,7 +67,7 @@ public class OrderRepository : IOrderRepository
             var itemsJson = JsonSerializer.Serialize(itemsWithTotal);
 
             var parameters = new {
-                RequestId = request.RequestId,
+                request.RequestId,
                 CustomerEmail = request.Customer.Email,
                 CustomerFirstName = request.Customer.FirstName,
                 CustomerLastName = request.Customer.LastName,
