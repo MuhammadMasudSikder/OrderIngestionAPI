@@ -17,7 +17,7 @@ This README includes:
 * Postman testing instructions
 * Environment configuration details
   
-Example configuration snippet in Program.cs:
+# Example configuration snippet in Program.cs:
 ```
 builder.Services.AddMassTransit(x =>
 {
@@ -34,7 +34,7 @@ builder.Services.AddMassTransit(x =>
 });
 ---
 
-## 2. Prerequisites
+### 2. Prerequisites
 
 Ensure the following are installed:
 
