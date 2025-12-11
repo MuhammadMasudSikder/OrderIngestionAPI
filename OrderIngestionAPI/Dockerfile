@@ -11,19 +11,19 @@ EXPOSE 8081
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
+WORKDIR "/src/OrderIngestionAPI"
 
 # Copy csproj files
-COPY ["Domain/Domain.csproj", " Domain/"]
-COPY ["Application/Application.csproj", " Application/"]
-COPY ["Infrastructure/Infrastructure.csproj", " Infrastructure/"]
+COPY ["Domain/Domain.csproj", "Domain/"]
+COPY ["Application/Application.csproj", "Application/"]
+COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
 COPY ["OrderIngestionAPI/OrderIngestionAPI.csproj", "OrderIngestionAPI/"]
 
 # Restore dependencies (this must run before copying everything)
 RUN dotnet restore "./OrderIngestionAPI/OrderIngestionAPI.csproj"
 
 COPY . .
-WORKDIR "/OrderIngestionAPI/OrderIngestionAPI"
+WORKDIR "/src/OrderIngestionAPI"
 RUN dotnet build "./OrderIngestionAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
