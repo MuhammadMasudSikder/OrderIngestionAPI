@@ -60,7 +60,7 @@ jobs:
       # Update deployment image
       - name: Update deployment image(Deploy API to AKS)
         run: |
-          kubectl set image deployment/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=${{ $ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest -n ${{ env.NAMESPACE }}
+          kubectl set image deployment/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=$ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest -n ${{ env.NAMESPACE }}
 
       # Check rollout status
       - name: Check rollout status
