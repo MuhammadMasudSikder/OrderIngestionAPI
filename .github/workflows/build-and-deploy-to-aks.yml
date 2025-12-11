@@ -10,7 +10,9 @@ env:
   ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
   AKS_RESOURCE_GROUP: ${{ secrets.AKS_RESOURCE_GROUP }}
   AKS_CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
-
+  IMAGE_NAME: orderingestion-api
+  NAMESPACE: orderingestion-api-prod
+   
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -44,12 +46,32 @@ jobs:
         with:
           resource-group: ${{ env.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ env.AKS_CLUSTER_NAME }}
+          
+      # Ensure namespace exists
+        - name: Ensure namespace exists
+          run: |
+            kubectl get namespace ${{ env.NAMESPACE }} || kubectl create namespace ${{ env.NAMESPACE }}
 
-      # Deploy API to AKS
-      - name: Create Namespace if not exists
-        run: |
-            kubectl get namespace orderingestion-api-prod || kubectl create namespace orderingestion-api-prod
-      - name: Deploy API to AKS
-        run: |
-          kubectl set image deployment/orderingestion-api orderingestion-api=$ACR_LOGIN_SERVER/orderingestion-api:latest -n orderingestion-api-prod
-          kubectl rollout restart deployment orderingestion-api -n orderingestion-api-prod
+
+            
+      # Apply deployment manifest
+        - name: Apply deployment manifest
+          run: |
+            kubectl apply -f k8s/deployment.yaml -n ${{ env.NAMESPACE }}
+      
+      # Update deployment image
+        - name: Update deployment image(Deploy API to AKS)
+          run: |
+            kubectl set image deployment/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=${{ $ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest -n ${{ env.NAMESPACE }}
+
+    # Check rollout status
+        - name: Check rollout status
+          run: |
+            kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }}
+
+      
+      # Deploy API to AKS  
+      #- name: Deploy API to AKS
+      #  run: |
+       #   kubectl set image deployment/orderingestion-api orderingestion-api=$ACR_LOGIN_SERVER/orderingestion-api:latest -n orderingestion-api-prod
+       #   kubectl rollout restart deployment orderingestion-api -n orderingestion-api-prod

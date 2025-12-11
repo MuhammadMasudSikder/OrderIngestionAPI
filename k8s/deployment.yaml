@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orderingestion-api
+  namespace: orderingestion-api-prod
+  labels:
+    app: orderingestion-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orderingestion-api
+  template:
+    metadata:
+      labels:
+        app: orderingestion-api
+    spec:
+      containers:
+        - name: orderingestion-api
+          image: orderingestionacr.azurecr.io/orderingestion-api:latest
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+      imagePullSecrets:
+        - name: acr-auth
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orderingestion-api
+  namespace: orderingestion-api-prod
+spec:
+  selector:
+    app: orderingestion-api
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
