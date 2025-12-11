@@ -15,7 +15,7 @@ WORKDIR /src
 COPY ["OrderIngestionAPI/OrderIngestionAPI.csproj", "OrderIngestionAPI/"]
 RUN dotnet restore "./OrderIngestionAPI/OrderIngestionAPI.csproj"
 COPY . .
-WORKDIR "/src/OrderIngestionAPI"
+WORKDIR "/OrderIngestionAPI/OrderIngestionAPI"
 RUN dotnet build "./OrderIngestionAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
