@@ -36,6 +36,12 @@ metadata:
     app: orderingestion-api
 spec:
   replicas: 2
+  #zero-downtime deployment using 
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: orderingestion-api
@@ -49,6 +55,18 @@ spec:
           image: orderingestionacr.azurecr.io/orderingestion-api:latest
           ports:
             - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
           envFrom:
             - secretRef:
                 name: db-connection
@@ -123,7 +141,7 @@ metadata:
 spec:
   secretName: orderingestion-api-tls-secret
   dnsNames:
-    - <DOMAIN>       # Replace with your public domain
+    - api.orderingestion.com
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
@@ -143,10 +161,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - <DOMAIN>
+        - api.orderingestion.com
       secretName: orderingestion-api-tls-secret
   rules:
-    - host: <DOMAIN>
+    - host: api.orderingestion.com
       http:
         paths:
           - path: /
