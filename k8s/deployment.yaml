@@ -107,9 +107,6 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
-  selector:
-    app: orderingestion-api
-
 ---
 # -----------------------------
 # 4. ClusterIssuer (Let's Encrypt)
