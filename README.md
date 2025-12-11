@@ -18,7 +18,7 @@ This README includes:
 * Environment configuration details
   
 Example configuration snippet in Program.cs:
-
+```
 builder.Services.AddMassTransit(x =>
 {
     x.UsingRabbitMq((context, cfg) =>
