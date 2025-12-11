@@ -66,8 +66,9 @@ public class OrderRepository : IOrderRepository
 
             var itemsJson = JsonSerializer.Serialize(itemsWithTotal);
 
-            var parameters = new {
-                request.RequestId,
+            var parameters = new
+            {
+                RequestId = request.RequestId,
                 CustomerEmail = request.Customer.Email,
                 CustomerFirstName = request.Customer.FirstName,
                 CustomerLastName = request.Customer.LastName,
@@ -119,9 +120,6 @@ public class OrderRepository : IOrderRepository
     {
         try
         {
-            //using var connection = new SqlConnection(_connectionString);
-            //await connection.OpenAsync();
-
             using var multi = await _db.QueryMultipleAsync(
                 "GetOrderById",
                 new { OrderId = orderId },
