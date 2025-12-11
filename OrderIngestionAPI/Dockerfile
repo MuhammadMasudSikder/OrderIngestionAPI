@@ -13,18 +13,22 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR "/src/OrderIngestionAPI"
 
-# Copy csproj files
-COPY ["Domain/Domain.csproj", "Domain/"]
-COPY ["Application/Application.csproj", "Application/"]
-COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
-COPY ["OrderIngestionAPI/OrderIngestionAPI.csproj", "OrderIngestionAPI/"]
+WORKDIR /src
 
-# Restore dependencies (this must run before copying everything)
-RUN dotnet restore "./OrderIngestionAPI/OrderIngestionAPI.csproj"
+# Copy csproj files and restore as separate layers
+COPY Domain/Domain.csproj Domain/
+COPY Application/Application.csproj Application/
+COPY Infrastructure/Infrastructure.csproj Infrastructure/
+COPY OrderIngestionAPI/OrderIngestionAPI.csproj OrderIngestionAPI/
 
+# Restore
+RUN dotnet restore "OrderIngestionAPI/OrderIngestionAPI.csproj"
+
+# Copy everything
 COPY . .
-WORKDIR "/src/OrderIngestionAPI"
-RUN dotnet build "./OrderIngestionAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# Build
+RUN dotnet build "OrderIngestionAPI/OrderIngestionAPI.csproj" -c Release -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
