@@ -36,7 +36,7 @@ metadata:
     app: orderingestion-api
 spec:
   replicas: 2
-  #zero-downtime deployment using 
+  #zero-downtime deployment using RollingUpdate
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -171,4 +171,3 @@ spec:
                 name: orderingestion-api
                 port:
                   number: 80
-                  

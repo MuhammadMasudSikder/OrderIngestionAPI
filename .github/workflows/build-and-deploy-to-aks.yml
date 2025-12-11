@@ -98,4 +98,3 @@ jobs:
       - name: Check rollout status
         run: |
           kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }}
-          
