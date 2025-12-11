@@ -15,7 +15,7 @@ spec:
         - objectName: DbConnection
           key: ConnectionStrings__DefaultConnection
   parameters:
-    usePodIdentity: "true"           # Set to true if using Managed Identity
+    usePodIdentity: true
     keyvaultName: "orderingestion-kv"
     objects: |
       array:
