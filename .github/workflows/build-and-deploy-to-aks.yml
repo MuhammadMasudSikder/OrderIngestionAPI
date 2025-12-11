@@ -1,9 +1,9 @@
-name: Deploy to AKS (OrderIngestion API)
+name: CI/CD - Build, Lint, Test
 
 on:
   push:
     branches:
-      - master
+      - master  
   workflow_dispatch:
 
 env:
@@ -20,7 +20,41 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
+      # Restore and build
+      - name: Restore dependencies
+        run: dotnet restore ./OrderIngestionAPI/OrderIngestionAPI.csproj
+
+      - name: Build
+        run: dotnet build ./OrderIngestionAPI/OrderIngestionAPI.csproj --configuration Release --no-restore
+
+      # Run Automated Tests
+      - name: Run Unit Tests
+        run: dotnet test --no-build --configuration Release --collect "XPlat Code Coverage"
+
+      # Lint C# Code
+      - name: C# Linting (dotnet format)
+        run: dotnet format --verify-no-changes
+        continue-on-error: false
+
+      # Lint Dockerfile
+      - name: Lint Dockerfile with hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: OrderIngestionAPI/Dockerfile
+
+      # Lint Kubernetes YAML
+      - name: Lint Kubernetes YAML
+        uses: ibiqlik/action-yamllint@v3.1.1
+        with:
+          config_file: .yamllint.yml
+
+        
       # Login to Azure using Service Principal
       - name: Azure Login
         uses: azure/login@v2

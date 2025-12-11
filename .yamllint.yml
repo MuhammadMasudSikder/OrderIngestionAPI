@@ -1,0 +1,39 @@
+extends: default
+
+rules:
+  line-length:
+    max: 200
+    level: warning
+
+  document-start:
+    present: false
+
+  truthy:
+    level: error
+
+  comments:
+    min-spaces-from-content: 1
+
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  trailing-spaces:
+    level: warning
+
+  empty-lines:
+    max: 2
+    level: warning
+
+  key-duplicates: enable
+
+  new-line-at-end-of-file: enable
+
+  braces: {level: warning}
+  brackets: {level: warning}
+
+  # Kubernetes-specific leniency
+  octal-values: disable
+  hyphens:
+    max-spaces-after: 1
