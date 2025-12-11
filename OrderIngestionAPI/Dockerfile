@@ -12,8 +12,16 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Copy csproj files
+COPY ["Domain/Domain.csproj", " Domain/"]
+COPY ["Application/Application.csproj", " Application/"]
+COPY ["Infrastructure/Infrastructure.csproj", " Infrastructure/"]
 COPY ["OrderIngestionAPI/OrderIngestionAPI.csproj", "OrderIngestionAPI/"]
+
+# Restore dependencies (this must run before copying everything)
 RUN dotnet restore "./OrderIngestionAPI/OrderIngestionAPI.csproj"
+
 COPY . .
 WORKDIR "/OrderIngestionAPI/OrderIngestionAPI"
 RUN dotnet build "./OrderIngestionAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
