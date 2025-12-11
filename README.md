@@ -29,8 +29,8 @@ Ensure the following are installed:
 * SQL Server 2016+
 * Visual Studio 2022
 
-### **Optional (for Docker)**
-
+### **for Docker**
+I have used docker by default.
 * Docker Desktop installed and running
 
 ---
@@ -387,8 +387,8 @@ dotnet run --project OrderIngestionAPI
 ---
 
 ### **Option 3: Run via Docker Desktop**
-
-A `Dockerfile` should exist in the project. Then run:
+Note: Visual Studio container tools require Docker to be running.
+A `Dockerfile` it has exist in the project. Then run:
 
 ```
 docker build -t orderingestionapi .
@@ -412,7 +412,7 @@ Sample JSON request:
 ```json
 {
   "orderNumber": "ORD-1001",
-  "customerName": "John Doe",
+  "customerName": "Masud Sikder",
   "product": "Laptop",
   "quantity": 2,
   "price": 1599.99
@@ -446,7 +446,7 @@ OrderIngestionAPI/
  ├── Domain/
  ├── Application/
  ├── Infrastructure/
- ├── API/
+ ├── OrderIngestionAPI/
  ├── appsettings.json
  ├── Dockerfile
  └── README.md
@@ -454,14 +454,7 @@ OrderIngestionAPI/
 
 ---
 
-## 9. Logging
-
-* Logs stored using built-in ASP.NET Core logging
-* Configure in `appsettings.json`
-
----
-
-## 10. How to Deploy (Azure / Windows Server)
+## 9. How to Deploy (Azure / Windows Server)
 
 1. Publish from Visual Studio (Folder or Azure Publish Profile)
 2. Configure SQL connection in environment variables
@@ -473,37 +466,7 @@ OrderIngestionAPI/
 
 ---
 
-## 11. Troubleshooting
-
-### **SQL Server not connecting?**
-
-* Ensure TCP/IP is enabled
-* Ensure correct SQL credentials
-* Add `TrustServerCertificate=True`
-
-### **502.5 Process Failure?**
-
-Run:
-
-```
-dotnet OrderIngestionAPI.dll
-```
-
-Check missing dependencies.
-
-### **Docker build fails?**
-
-Use:
-
-```
-docker builder prune
-```
-
-Then rebuild.
-
----
-
-## 12. Author
+## 10. Author
 
 **Masud Sikder**
 
