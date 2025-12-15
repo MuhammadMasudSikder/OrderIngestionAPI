@@ -8,7 +8,7 @@ public class CreateOrderResponse
     public string Status { get; set; } = string.Empty;
     public decimal TotalAmount { get; set; }
     public DateTime OrderDate { get; set; }
-    public string Message { get; set; } = "Order created successfully";
+    public string Message { get; set; }
     public DateTime ProcessedAt { get; set; }
 }
 

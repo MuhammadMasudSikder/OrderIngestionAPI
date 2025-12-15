@@ -1,4 +1,6 @@
+using Application.Commands.Orders;
 using Application.DTOs;
+using Application.interfaces;
 using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Messaging.Contracts;
@@ -10,7 +12,7 @@ using System.Text.Json;
 
 namespace Infrastructure.Messaging.Consumers;
 
-public class OrderProcessorConsumer : IConsumer<OrderIngestedMessage>
+public class OrderProcessorConsumer : IConsumer<IIngestOrderMessage>
 {
     private readonly IOrderRepository _repo;
     private readonly ILogger<OrderProcessorConsumer> _logger;
@@ -24,32 +26,32 @@ public class OrderProcessorConsumer : IConsumer<OrderIngestedMessage>
 
     }
 
-    public async Task Consume(ConsumeContext<OrderIngestedMessage> context)
+    public async Task Consume(ConsumeContext<IIngestOrderMessage> context)
     {
-        var msg = context.Message.MsgContext;
-        _logger.LogInformation("Consuming message {RequestId} OrderId:{OrderId}", msg.RequestId, msg.OrderId);
+        //var msg = context.Message.MsgContext;
+
 
         // map payload to domain (simple demo)
-        var json = JsonSerializer.Serialize(msg);
-        var order = JsonSerializer.Deserialize<Order>(json)!;
+        //var json = JsonSerializer.Serialize(context.Message.OrderId);
+        _logger.LogInformation("Consuming message {RequestId} OrderId:{OrderId}", context.Message.RequestId, context.Message.OrderId);
 
         try
         {
-
+            //var order = JsonSerializer.Deserialize<IIngestOrderMessage>(json)!;
             //Simulate a call to a third-party Logistics Gateway
             _logger.LogInformation("Simulate a call to a third-party Logistics Gateway");
-            await _logistics.NotifyLogisticsAsync(order.OrderId, order.RequestId);
+            await _logistics.NotifyLogisticsAsync(context.Message.OrderId, context.Message.RequestId);
 
             await context.RespondAsync(new CreateOrderResponse { Status = "Order forwarded to logistics" });
         }
         catch (DbUpdateException dbex)
         {
-            _logger.LogError(dbex, "DB error persisting order {RequestId}", msg.RequestId);
+            _logger.LogError(dbex, "DB error persisting order {RequestId}", context.Message.RequestId);
             throw; // allow retry
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error processing order {RequestId}", msg.RequestId);
+            _logger.LogError(ex, "Unexpected error processing order {RequestId}", context.Message.RequestId);
             throw;
         }
     }

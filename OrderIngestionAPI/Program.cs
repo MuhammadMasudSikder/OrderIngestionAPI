@@ -1,5 +1,7 @@
+using Application.Commands.Orders;
 using FluentValidation;
 using Infrastructure;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OrderIngestionAPI.Middleware;
@@ -8,6 +10,14 @@ using Serilog;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//builder.WebHost.UseUrls("http://+:8080");
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(IngestOrderCommand).Assembly);
+});
+
+builder.Services.AddValidatorsFromAssembly(typeof(IngestOrderCommand).Assembly);
 
 //Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -71,7 +81,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
-
+builder.Services.AddHealthChecks();
 builder.Services.AddValidatorsFromAssemblyContaining<OrderIngestRequestValidator>();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -88,12 +98,31 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "OrderIngestion API v1");
+    });
 }
+
+// Landing page at root URL
+app.MapGet("/", async context =>
+{
+    context.Response.ContentType = "text/html";
+    await context.Response.WriteAsync(@"
+        <html>
+            <head><title>OrderIngestion API</title></head>
+            <body>
+                <h1>OrderIngestion API is running</h1>
+                <p>Use <a href='/health'>/health</a> to check status.</p>
+            </body>
+        </html>
+    ");
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.MapGet("/health", () => Results.Ok("Healthy"));
 app.MapControllers();
+
 
 app.Run();

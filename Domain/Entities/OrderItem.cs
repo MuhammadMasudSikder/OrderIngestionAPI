@@ -10,4 +10,18 @@ public class OrderItem
     public decimal UnitPrice { get; set; }
     public decimal TotalPrice { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    private OrderItem() { }
+
+    public OrderItem(
+            string productSku,
+            string productName,
+            int quantity,
+            decimal unitPrice)
+    {
+        ProductSku = productSku;
+        ProductName = productName;
+        Quantity = quantity;
+        UnitPrice = unitPrice;
+    }
 }

@@ -1,0 +1,14 @@
+cd D:\POC\OrderIngestionAPI>
+docker build -t orderingestionacr.azurecr.io/orderingestion-api:latest -f  ./OrderIngestionAPI/Dockerfile .
+docker push orderingestionacr.azurecr.io/orderingestion-api:latest
+
+//build locally
+docker build --no-cache -t orderingestion-api:latest -f  ./OrderIngestionAPI/Dockerfile .
+docker run -p 6000:8080 -e ASPNETCORE_ENVIRONMENT=Development orderingestion-api:latest
+docker run -p 6000:8080 -e ASPNETCORE_URLS=http://0.0.0.0:8080 orderingestion-api:latest
+docker run -p 6000:8080 -e ASPNETCORE_HTTP_PORTS=8080 orderingestion-api:latest
+
+Verify in browser
+http://localhost:6000/
+http://localhost:6000/health
+https://localhost:32771/swagger/index.html

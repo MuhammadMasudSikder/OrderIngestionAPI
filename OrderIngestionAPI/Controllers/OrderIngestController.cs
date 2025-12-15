@@ -1,6 +1,8 @@
+using Application.Commands.Orders;
 using Application.DTOs;
 using Application.interfaces;
 using Domain.Entities;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderIngestionAPI.Validators;
@@ -11,13 +13,14 @@ namespace OrderIngestionAPI.Controllers;
 [Route("api/v1/orders")]
 public class OrderIngestController : ControllerBase
 {
-    private readonly IOrderService _orderService; // From Application Layer
+    //private readonly IOrderService _orderService; // From Application Layer
     private readonly ILogger<OrderIngestController> _logger;
+    private readonly IMediator _mediator;
 
-    public OrderIngestController(IOrderService orderService, ILogger<OrderIngestController> logger)
+    public OrderIngestController(ILogger<OrderIngestController> logger, IMediator mediator)
     {
-        _orderService = orderService;
         _logger = logger;
+        _mediator = mediator;
     }
 
     [HttpPost]
@@ -50,31 +53,40 @@ public class OrderIngestController : ControllerBase
 
         try
         {
-            // Converting DTO to Domain Entity
-            var order = new Order
-            {
-                RequestId = payload.RequestId,
-                Platform = payload.Platform,
-                Customer = payload.Customer != null ? new Customer
-                {
-                    Email = payload.Customer.Email,
-                    FirstName = payload.Customer.FirstName,
-                    LastName = payload.Customer.LastName,
-                    Phone = payload.Customer.Phone,
-                } : null,
-                Items = payload.Items.Select(i => new OrderItem
-                {
-                    ProductSku = i.ProductSku,
-                    ProductName = i.ProductName,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice,
-                }).ToList()
-            };
+            // Converting DTO to IngestOrderCommand
+            var command = new IngestOrderCommand
+            (
+                0, // OrderId Will be set by the database
+                payload.RequestId,
+                0, // CustomerId Will be set by the database
+                DateTime.UtcNow,
+                0,
+                "",
+                payload.Platform,
+                DateTime.UtcNow,
+                DateTime.UtcNow,
+                new Customer
+                (
+                    payload.Customer.Email,
+                    payload.Customer.FirstName,
+                    payload.Customer.LastName,
+                    payload.Customer.Phone
+                ),
+                payload.Items.Select(i => new OrderItem
+                (
+                    i.ProductSku,
+                    i.ProductName,
+                    i.Quantity,
+                    i.UnitPrice
+                )).ToList()
+            );
 
             _logger.LogInformation("Creating order. RequestId: {RequestId}, ItemCount: {ItemCount}",
-                payload.RequestId, order.Items.Count);
+                payload.RequestId, payload.Items.Count);
 
-            var result = await _orderService.CreateOrderAsync(order);
+            //var result = await _orderService.CreateOrderAsync(order);
+            //sending order through order service
+            var result = await _mediator.Send(command);
 
             if (result.IsSuccess)
             {
@@ -86,7 +98,7 @@ public class OrderIngestController : ControllerBase
             else
             {
                 _logger.LogError("Order creation failed. RequestId: {RequestId}, Reason: {Reason}",
-                    payload.RequestId, result.Status);
+                    command.RequestId, result.Status);
 
                 return StatusCode(500, result); // Internal server error
             }

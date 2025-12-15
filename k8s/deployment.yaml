@@ -15,14 +15,13 @@ spec:
         - objectName: DbConnection
           key: ConnectionStrings__DefaultConnection
   parameters:
-    usePodIdentity: true
+    usePodIdentity: "true"        # if using managed identity
     keyvaultName: "orderingestion-kv"
     objects: |
       array:
         - |
           objectName: DbConnection
           objectType: secret
-
 ---
 # -----------------------------
 # 2. Deployment
@@ -67,6 +66,9 @@ spec:
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 10
+          env:
+             - name: ASPNETCORE_URLS
+               value: "http://+:80"
           envFrom:
             - secretRef:
                 name: db-connection
@@ -81,18 +83,11 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: "orderingestion-kv-provider"
-          resources:
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
-            requests:
-              cpu: "250m"
-              memory: "256Mi"
       imagePullSecrets:
         - name: acr-auth
 ---
 # -----------------------------
-# 3. Service (LoadBalancer)
+# 3. Service (ClusterIP)
 # -----------------------------
 apiVersion: v1
 kind: Service
@@ -100,9 +95,9 @@ metadata:
   name: orderingestion-api
   namespace: orderingestion-api-prod
 spec:
+  type: ClusterIP   # must be ClusterIP for NGINX ingress routing
   selector:
     app: orderingestion-api
-  type: LoadBalancer
   ports:
     - protocol: TCP
       port: 80
@@ -120,7 +115,7 @@ spec:
     server: https://acme-v02.api.letsencrypt.org/directory
     email: muhammadmasudsikder@gmail.com
     privateKeySecretRef:
-      name: letsencrypt-prod-key
+      name: letsencrypt-prod
     solvers:
       - http01:
           ingress:
@@ -153,16 +148,31 @@ metadata:
   name: orderingestion-api-ingress
   namespace: orderingestion-api-prod
   annotations:
-    kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
+  ingressClassName: nginx
+
+  # TLS for your real domain (works once DNS is ready)
   tls:
     - hosts:
         - api.orderingestion.com
       secretName: orderingestion-api-tls-secret
+
   rules:
+    # Rule for real domain
     - host: api.orderingestion.com
       http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: orderingestion-api
+                port:
+                  number: 80
+
+    # Hostless rule for testing via IP
+    - http:
         paths:
           - path: /
             pathType: Prefix

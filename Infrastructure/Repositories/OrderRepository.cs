@@ -1,6 +1,7 @@
 using Dapper;
 using Domain.Entities;
 using Domain.Interfaces;
+using Microsoft.CodeAnalysis;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using System.Data;
@@ -135,24 +136,19 @@ public class OrderRepository : IOrderRepository
             var items = (await multi.ReadAsync<OrderItem>()).ToList();
 
             var order = new Order
-            {
-                OrderId = orderData.OrderId,
-                RequestId = orderData.RequestId,
-                CustomerId = orderData.CustomerId,
-                OrderDate = orderData.OrderDate,
-                TotalAmount = orderData.TotalAmount,
-                Status = orderData.Status,
-                Platform = orderData.Platform,
-                Customer = new Customer
-                {
-                    CustomerId = orderData.CustomerId,
-                    Email = orderData.Email,
-                    FirstName = orderData.FirstName,
-                    LastName = orderData.LastName,
-                    Phone = orderData.Phone
-                },
-                Items = items
-            };
+            (
+                (int)orderData.OrderId,
+                orderData.RequestId,              
+                new Customer
+                (
+                    orderData.Email,
+                    orderData.FirstName,
+                    orderData.LastName,
+                    orderData.Phone
+                ),
+                items,
+                orderData.Platform
+            );
 
             return order;
         }

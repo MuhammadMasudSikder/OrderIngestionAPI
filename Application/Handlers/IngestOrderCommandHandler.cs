@@ -1,33 +1,35 @@
-﻿using Application.DTOs;
+﻿using Application.Commands.Orders;
+using Application.DTOs;
 using Application.interfaces;
 using Domain.Entities;
 using Domain.Interfaces;
-using Infrastructure.Messaging.Contracts;
-using Infrastructure.Repositories;
 using MassTransit;
-using MassTransit.Transports;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Infrastructure.Services
+namespace Application.Handlers
 {
-    public class OrderService : IOrderService
+    public class IngestOrderCommandHandler
+    : IRequestHandler<IngestOrderCommand, CreateOrderResponse>
     {
-        private readonly ILogger<OrderService> _logger;
+        private readonly ILogger<IngestOrderCommandHandler> _logger;
         private readonly IPublishEndpoint _publish;
         private readonly IOrderRepository _repo;
 
-        public OrderService(IOrderRepository repo,
+        public IngestOrderCommandHandler(IOrderRepository repo,
             IPublishEndpoint publish,
             IOrderRepository orderRepository,
             ILogisticsGateway logisticsGateway,
-            ILogger<OrderService> logger)
+            ILogger<IngestOrderCommandHandler> logger)
         {
             _repo = repo;
             _publish = publish;
             _logger = logger;
         }
 
-        public async Task<CreateOrderResponse> CreateOrderAsync(Order request)
+        public async Task<CreateOrderResponse> Handle(
+            IngestOrderCommand request,
+            CancellationToken cancellationToken)
         {
             try
             {
@@ -52,19 +54,46 @@ namespace Infrastructure.Services
                     };
                 }
 
+                var customer = new Customer(
+                    request.Customer.Email,
+                    request.Customer.FirstName,
+                    request.Customer.LastName,
+                    request.Customer.Phone
+                );
+
+                var items = request.Items.Select(i =>
+                    new OrderItem(
+                        i.ProductSku,
+                        i.ProductName,
+                        i.Quantity,
+                        i.UnitPrice
+                    )
+                ).ToList();
+
+                var order = new Order(
+                    orderId: request.OrderId,
+                    requestId: request.RequestId,
+                    customer: customer,
+                    items: items,
+                    platform: request.Platform
+                );
+
                 //If not exists, create new order
-                var newOrder = await _repo.CreateOrderAsync(request);
+                var newOrder = await _repo.CreateOrderAsync(order);
 
                 _logger.LogInformation("Order persisted {Id}", newOrder.OrderId);
 
                 //Implement Asynchronous Processing through RabbitMQ, Simulate third-party API call with 2-second delay
                 await _publish.Publish<IIngestOrderMessage>(new
                 {
-                    MsgContext = request
+                    OrderId = newOrder.OrderId,
+                    RequestId = newOrder.RequestId,
+                    Status = newOrder.Status,
+                    TotalAmount = newOrder.TotalAmount
                 });
 
                 _logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}",
-                    request.OrderId, request.RequestId);
+                    newOrder.OrderId, newOrder.RequestId);
 
                 return new CreateOrderResponse
                 {
