@@ -7,7 +7,7 @@ Comprehensive guide for setting up, running, and deploying the **OrderIngestionA
 ## 1. Project Overview
 
 The **OrderIngestionAPI** is a .NET Core API designed to ingest order data, store it in SQL Server, and expose endpoints for processing.
-
+To ensure the Order Ingestion API remains responsive while simulating a call to a third-party Logistics Gateway, the project uses RabbitMQ as a message broker and MassTransit as the messaging library. This allows long-running operations to be handled asynchronously without blocking API requests.
 This README includes:
 
 * SQL table creation script
@@ -16,10 +16,40 @@ This README includes:
 * Running the API locally (IIS Express, Kestrel, Docker Desktop)
 * Postman testing instructions
 * Environment configuration details
+  
+Example configuration snippet in Program.cs:
+```
+// MassTransit
+services.AddMassTransit(x =>
+{
+    x.AddConsumer<OrderProcessorConsumer>(cfg =>
+    {
+        cfg.UseMessageRetry(r => r.Exponential(
+            5,
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(30),
+            TimeSpan.FromSeconds(2)
+        ));
+        cfg.UseInMemoryOutbox();
+    });
 
----
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(config["RabbitMQ:Host"] ?? "localhost", h =>
+        {
+            h.Username(config["RabbitMQ:Username"] ?? "guest");
+            h.Password(config["RabbitMQ:Password"] ?? "guest");
+        });
 
-## 2. Prerequisites
+        cfg.ReceiveEndpoint("order-ingest-queue", ep =>
+        {
+            ep.ConfigureConsumer<OrderProcessorConsumer>(context);
+        });
+    });
+});
+```
+
+### 2. Prerequisites
 
 Ensure the following are installed:
 
