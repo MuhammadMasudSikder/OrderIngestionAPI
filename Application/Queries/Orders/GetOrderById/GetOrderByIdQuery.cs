@@ -9,5 +9,8 @@ using System.Threading.Tasks;
 
 namespace Application.Queries.Orders.GetOrderById
 {
-    public record GetOrderByIdQuery(int OrderId) : IRequest<Order>;
+    public class GetOrderByIdQuery : IRequest<Order>
+    {
+        public int OrderId { get; set; }
+    }
 }

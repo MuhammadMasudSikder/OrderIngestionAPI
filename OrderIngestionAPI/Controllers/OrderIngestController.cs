@@ -1,6 +1,7 @@
 using Application.Commands.Orders;
 using Application.DTOs;
 using Application.interfaces;
+using Application.Queries.Orders.GetOrderById;
 using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -84,16 +85,25 @@ public class OrderIngestController : ControllerBase
             _logger.LogInformation("Creating order. RequestId: {RequestId}, ItemCount: {ItemCount}",
                 payload.RequestId, payload.Items.Count);
 
-            //var result = await _orderService.CreateOrderAsync(order);
             //sending order through order service
+            //var result = await _orderService.CreateOrderAsync(order);
+
+            //CQRS Command
             var result = await _mediator.Send(command);
 
             if (result.IsSuccess)
             {
+                // Fetch complete order with items GetOrderByIdQuery
+                var query = new GetOrderByIdQuery { OrderId = result.OrderId };
+
+                //CQRS Query
+                var order = await _mediator.Send(query);
+                //return order ?? throw new InvalidOperationException("Failed to retrieve created order");
+
                 _logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}, TotalAmount: {TotalAmount}",
                     result.OrderId, result.RequestId, result.TotalAmount);
 
-                return Ok(result);
+                return Ok(order);
             }
             else
             {

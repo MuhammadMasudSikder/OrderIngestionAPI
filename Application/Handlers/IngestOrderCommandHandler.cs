@@ -81,29 +81,39 @@ namespace Application.Handlers
                 //If not exists, create new order
                 var newOrder = await _repo.CreateOrderAsync(order);
 
-                _logger.LogInformation("Order persisted {Id}", newOrder.OrderId);
-
-                //Implement Asynchronous Processing through RabbitMQ, Simulate third-party API call with 2-second delay
-                await _publish.Publish<IIngestOrderMessage>(new
+                if (newOrder != null)
                 {
-                    OrderId = newOrder.OrderId,
-                    RequestId = newOrder.RequestId,
-                    Status = newOrder.Status,
-                    TotalAmount = newOrder.TotalAmount
-                });
+                    _logger.LogInformation("Order persisted {Id}", newOrder.OrderId);
 
-                _logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}",
-                    newOrder.OrderId, newOrder.RequestId);
+                    //Implement Asynchronous Processing through RabbitMQ, Simulate third-party API call with 2-second delay
+                    await _publish.Publish<IIngestOrderMessage>(new
+                    {
+                        OrderId = newOrder.OrderId,
+                        RequestId = newOrder.RequestId,
+                        Status = newOrder.Status,
+                        TotalAmount = newOrder.TotalAmount
+                    });
 
+                    _logger.LogInformation("Order created successfully. OrderId: {OrderId}, RequestId: {RequestId}",
+                        newOrder.OrderId, newOrder.RequestId);
+
+                    return new CreateOrderResponse
+                    {
+                        IsSuccess = true,
+                        OrderId = newOrder.OrderId,
+                        RequestId = newOrder.RequestId,
+                        Status = newOrder.Status,
+                        TotalAmount = newOrder.TotalAmount,
+                        OrderDate = newOrder.OrderDate,
+                        Message = "Order created successfully"
+                    };
+                }
                 return new CreateOrderResponse
                 {
-                    IsSuccess = true,
-                    OrderId = newOrder.OrderId,
-                    RequestId = newOrder.RequestId,
-                    Status = newOrder.Status,
-                    TotalAmount = newOrder.TotalAmount,
-                    OrderDate = newOrder.OrderDate,
-                    Message = "Order created successfully"
+                    IsSuccess = false,
+                    RequestId = request.RequestId,
+                    Status = "Failed to create order",
+                    OrderDate = DateTime.UtcNow
                 };
             }
             catch (Exception ex)
