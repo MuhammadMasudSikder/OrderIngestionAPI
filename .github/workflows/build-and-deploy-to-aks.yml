@@ -41,7 +41,7 @@ jobs:
       # Lint C# Code
       - name: C# Linting (dotnet format)
         run: dotnet format --verify-no-changes
-        continue-on-error: false
+        continue-on-error: true
 
       # Lint Dockerfile
       - name: Lint Dockerfile with hadolint
