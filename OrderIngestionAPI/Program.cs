@@ -147,7 +147,7 @@ app.MapGet("/health", () => Results.Ok("Healthy"));
 app.MapHealthChecks("/health");
 app.MapControllers();
 
-//app.Run();bbb
+//app.Run();
 
 try
 {
