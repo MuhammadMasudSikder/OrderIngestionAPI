@@ -6,9 +6,8 @@ kind: Namespace
 metadata:
   name: orderingestion-api-prod
 ---
-
 # -----------------------------
-# 2. Deployment
+# 1. Deployment
 # -----------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -50,5 +49,25 @@ spec:
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 10
+          env:
+             - name: ASPNETCORE_URLS
+               value: "http://+:80"
+          envFrom:
+            - secretRef:
+                name: db-connection
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "orderingestion-kv-provider"
+      imagePullSecrets:
+        - name: acr-auth
+
           
         

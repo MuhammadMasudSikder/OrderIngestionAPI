@@ -1,28 +1,11 @@
-## -----------------------------
-## 1. SecretProviderClass for Key Vault
-## -----------------------------
-#apiVersion: secrets-store.csi.x-k8s.io/v1
-#kind: SecretProviderClass
-#metadata:
-#  name: orderingestion-kv-provider
-#  namespace: orderingestion-api-prod
-#spec:
-#  provider: azure
-#  secretObjects:
-#    - secretName: db-connection
-#      type: Opaque
-#      data:
-#        - objectName: DbConnection
-#          key: ConnectionStrings__DefaultConnection
-#  parameters:
-#    usePodIdentity: "true"        # if using managed identity
-#    keyvaultName: "orderingestion-kv"
-#    objects: |
-#      array:
-#        - |
-#          objectName: DbConnection
-#          objectType: secret
-#---
+# -----------------------------
+# 1. Create Namespace
+# -----------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: orderingestion-api-prod
+---
 # -----------------------------
 # 2. Deployment
 # -----------------------------
@@ -66,28 +49,17 @@ spec:
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 10
-          env:
-             - name: ASPNETCORE_URLS
-               value: "http://+:80"
-          envFrom:
-            - secretRef:
-                name: db-connection
-          volumeMounts:
-            - name: secrets-store-inline
-              mountPath: "/mnt/secrets-store"
-              readOnly: true
-      volumes:
-        - name: secrets-store-inline
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: "orderingestion-kv-provider"
-      imagePullSecrets:
-        - name: acr-auth
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ConnectionStrings__DefaultConnection
+          valueFrom:
+            secretKeyRef:
+              name: db-connection
+              key: connectionstring
 ---
 # -----------------------------
-# 3. Service (ClusterIP)
+# 2. Service (LoadBalancer)
 # -----------------------------
 apiVersion: v1
 kind: Service
@@ -95,7 +67,7 @@ metadata:
   name: orderingestion-api
   namespace: orderingestion-api-prod
 spec:
-  type: ClusterIP   # must be ClusterIP for NGINX ingress routing
+  type: LoadBalancer   # must be LoadBalancer for NGINX ingress routing
   selector:
     app: orderingestion-api
   ports:
@@ -104,7 +76,7 @@ spec:
       targetPort: 80
 ---
 # -----------------------------
-# 4. ClusterIssuer (Let's Encrypt)
+# 3. ClusterIssuer (Let's Encrypt)
 # -----------------------------
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -123,7 +95,7 @@ spec:
 
 ---
 # -----------------------------
-# 5. Certificate
+# 4. Certificate
 # -----------------------------
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -140,7 +112,7 @@ spec:
 
 ---
 # -----------------------------
-# 6. NGINX Ingress
+# 5. NGINX Ingress
 # -----------------------------
 apiVersion: networking.k8s.io/v1
 kind: Ingress
