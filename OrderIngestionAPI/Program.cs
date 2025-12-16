@@ -11,6 +11,20 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Azure Application Insights (Monitoring) Telemetry
+builder.Services.AddApplicationInsightsTelemetry();
+
+////Logging External Calls (HTTP, Polly)
+//builder.Services.AddHttpClient<ILogisticsClient>()
+//    .AddPolicyHandler(Policy
+//        .Handle<HttpRequestException>()
+//        .RetryAsync(3, (ex, retry) =>
+//        {
+//            logger.LogWarning(ex,
+//                "Retry {Retry} calling logistics service",
+//                retry);
+//        }));
+
 //builder.WebHost.UseUrls("http://+:8080");
 builder.Services.AddMediatR(cfg =>
 {
@@ -19,7 +33,15 @@ builder.Services.AddMediatR(cfg =>
 
 builder.Services.AddValidatorsFromAssembly(typeof(IngestOrderCommand).Assembly);
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddHealthChecks()
+    .AddSqlServer(connectionString);
+
 //Configure Serilog
+Directory.CreateDirectory(
+    Path.Combine(AppContext.BaseDirectory, "Logs")
+);
+
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug() // logs Information, Debug, Error, etc.
     .WriteTo.Console()    // optional: console logging
@@ -122,7 +144,20 @@ app.MapGet("/", async context =>
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok("Healthy"));
+app.MapHealthChecks("/health");
 app.MapControllers();
 
+//app.Run();
 
-app.Run();
+try
+{
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
