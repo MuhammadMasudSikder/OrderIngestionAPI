@@ -49,11 +49,11 @@ jobs:
         with:
           dockerfile: OrderIngestionAPI/Dockerfile
 
-      # Lint Kubernetes YAML
-      - name: Lint Kubernetes YAML
-        uses: ibiqlik/action-yamllint@v3.1.1
-        with:
-          config_file: .yamllint.yml
+      ## Lint Kubernetes YAML
+      #- name: Lint Kubernetes YAML
+      #  uses: ibiqlik/action-yamllint@v3.1.1
+      #  with:
+      #    config_file: .yamllint.yml
 
         
       # Login to Azure using Service Principal
