@@ -1,0 +1,219 @@
+
+#Infrastructure provisioning with Terraform for AKS, Key Vault, ACR, etc.
+run: ./infra/terraform init
+run: ./infra/terraform validate
+run: ./infra/terraform plan -out=tfplan
+run: ./infra/terraform apply -auto-approve tfplan
+	
+#Correct deployment order (IMPORTANT)	
+#RabbitMQ
+#SQL Server
+#API
+
+Step 1: Build & push API image to ACR
+# 1. Build API
+cd D:\POC\OrderIngestionAPI
+docker build -t orderingestionacr.azurecr.io/orderingestion-api:latest -f OrderIngestionAPI/Dockerfile .
+
+#Azure login
+az login
+
+#Enable admin user
+az acr update -n orderingestionacr --admin-enabled true
+
+# Login to ACR
+az acr login --name orderingestionacr
+
+#Push API
+docker push orderingestionacr.azurecr.io/orderingestion-api:latest
+		  
+
+Step 2: Deploy to AKS
+D:\POC\OrderIngestionAPI>az account show
+{
+  "environmentName": "AzureCloud",
+  "homeTenantId": "84768a2b-e1a3-4985-800a-6463c20a65d5",
+  "id": "f10a7eca-27b7-43fd-94f0-770ddc5a120e",
+  "isDefault": true,
+  "managedByTenants": [],
+  "name": "Azure subscription 1",
+  "state": "Enabled",
+  "tenantDefaultDomain": "bdtechvisionco.com",
+  "tenantDisplayName": "TechVision",
+  "tenantId": "84768a2b-e1a3-4985-800a-6463c20a65d5",
+  "user": {
+    "name": "masud@bdtechvisionco.com",
+    "type": "user"
+  }
+}
+
+#Get AKS credentials (this fixes 90% of cases)
+az aks get-credentials --resource-group orderingestion-rg --name orderingestion-aks --overwrite-existing
+
+#Verify cluster connectivity
+kubectl config current-context
+kubectl cluster-info
+
+#Install cert-manager (official manifest)
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.5/cert-manager.yaml
+
+#Verify installation
+kubectl get pods -n cert-manager
+#You should see:
+cert-manager
+cert-manager-webhook
+cert-manager-cainjector
+
+#Deploy to AKS
+kubectl apply -f "D:\POC\OrderIngestionAPI\k8s\deployment.yaml"
+
+#Install ingress-nginx (official, AKS-safe)
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
+#Verify installation
+D:\POC\OrderIngestionAPI>kubectl get pods -n ingress-nginx
+NAME                                        READY   STATUS      RESTARTS   AGE
+ingress-nginx-admission-create-fpq6r        0/1     Completed   0          54s
+ingress-nginx-admission-patch-wpwxh         0/1     Completed   0          54s
+ingress-nginx-controller-659c88cdd9-xdqrm   1/1     Running     0          54s
+
+#Get public IP of Ingress
+D:\POC\OrderIngestionAPI>kubectl get svc -n ingress-nginx
+NAME                                 TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                      AGE
+ingress-nginx-controller             LoadBalancer   10.0.159.119   57.158.98.173   80:30192/TCP,443:32687/TCP   2m27s
+ingress-nginx-controller-admission   ClusterIP      10.0.124.161   <none>          443/TCP                      2m27s
+
+#Re-apply your manifests
+kubectl apply -f "D:\POC\OrderIngestionAPI\k8s\deployment.yaml"
+
+Verify TLS objects
+#D:\POC\OrderIngestionAPI>kubectl get clusterissuer
+NAME               READY   AGE
+letsencrypt-prod   True    4m51s
+
+#D:\POC\OrderIngestionAPI>kubectl describe clusterissuer letsencrypt-prod
+Name:         letsencrypt-prod
+Namespace:
+Labels:       <none>
+Annotations:  <none>
+API Version:  cert-manager.io/v1
+Kind:         ClusterIssuer
+Metadata:
+  Creation Timestamp:  2025-12-17T06:28:47Z
+  Generation:          1
+  Resource Version:    193200
+  UID:                 430372c5-6e2e-421d-9c66-6efdb9144250
+Spec:
+  Acme:
+    Email:  muhammadmasudsikder@gmail.com
+    Private Key Secret Ref:
+      Name:  letsencrypt-prod
+    Server:  https://acme-v02.api.letsencrypt.org/directory
+    Solvers:
+      http01:
+        Ingress:
+          Class:  nginx
+Status:
+  Acme:
+    Last Private Key Hash:  hRtcXmf5tQ2WmTcyscqpB9SM8ev/0pTXLdTfHyeAzTo=
+    Last Registered Email:  muhammadmasudsikder@gmail.com
+  Conditions:
+    Last Transition Time:  2025-12-17T06:28:49Z
+    Message:               The ACME account was registered with the ACME server
+    Observed Generation:   1
+    Reason:                ACMEAccountRegistered
+    Status:                True
+    Type:                  Ready
+Events:                    <none>
+
+#Add Secrets for SQL connection
+kubectl create secret generic db-connection --from-literal=connectionstring="Server=tcp:orderingestion-sql.database.windows.net,1433;Initial Catalog=orderingestiondb;Persist Security Info=False;User ID=sqladminuser;Password={your_password};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" -n orderingestion-api-prod
+
+#Verify:
+D:\POC\OrderIngestionAPI>kubectl get secret db-connection -n orderingestion-api-prod
+NAME            TYPE     DATA   AGE
+db-connection   Opaque   1      100s
+
+D:\POC\OrderIngestionAPI>kubectl describe secret db-connection -n orderingestion-api-prod
+Name:         db-connection
+Namespace:    orderingestion-api-prod
+Labels:       <none>
+Annotations:  <none>
+
+Type:  Opaque
+
+Data
+====
+connectionstring:  258 bytes
+
+##The secret is then accessible in your Deployment using:
+
+env:
+  - name: ConnectionStrings__DefaultConnection
+    valueFrom:
+      secretKeyRef:
+        name: db-connection
+        key: connectionstring
+		
+#Install RabbitMQ in AKS
+
+#Step 1 — Import official RabbitMQ image into ACR
+az acr import --name orderingestionacr --source docker.io/library/rabbitmq:3.13-management --image rabbitmq:3.13-management
+  
+#Verify:
+
+az acr repository list --name orderingestionacr -o table
+
+#Step 2 — Deploy RabbitMQ using official image (simple & reliable)
+kubectl apply -f "D:\POC\OrderIngestionAPI\k8s\rabbitmq.yaml"
+
+#Step 3 — Verify RabbitMQ is running
+kubectl get pods -n orderingestion-api-prod
+kubectl get svc rabbitmq -n orderingestion-api-prod
+rabbitmq-746cdcf45d-nlx5k             1/1     Running            0                102s
+
+
+kubectl apply -f "D:\POC\OrderIngestionAPI\k8s\Redeploy.yaml"
+
+#Redeploy app
+kubectl rollout restart deployment orderingestion-api -n orderingestion-api-prod
+kubectl get pods -n orderingestion-api-prod -w
+
+
+
+#Final output should display as like below
+D:\POC\OrderIngestionAPI>kubectl get pods -n orderingestion-api-prod
+NAME                                  READY   STATUS    RESTARTS   AGE
+cm-acme-http-solver-l6wlq             1/1     Running   0          8h
+orderingestion-api-856bf68db6-8xbqq   1/1     Running   0          26s
+orderingestion-api-856bf68db6-9gqh5   1/1     Running   0          35s
+rabbitmq-746cdcf45d-nlx5k             1/1     Running   0          43m
+
+
+D:\POC\OrderIngestionAPI>kubectl get svc -n orderingestion-api-prod
+NAME                        TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)              AGE
+cm-acme-http-solver-lrplx   NodePort       10.0.250.36    <none>           8089:30715/TCP       8h
+orderingestion-api          LoadBalancer   10.0.121.225   20.187.176.205   6000:31921/TCP       8h
+rabbitmq                    ClusterIP      10.0.22.49     <none>           5672/TCP,15672/TCP   56m
+
+#Use postman
+http://20.187.176.205:6000/health
+Result: 
+"Healthy"
+
+
+
+Map the hostname locally
+
+Edit your hosts file:
+
+Windows: C:\Windows\System32\drivers\etc\hosts
+
+Linux/macOS: /etc/hosts
+
+Add a line:
+
+20.187.176.205   api.orderingestion.com
+
+
+D:\POC\OrderIngestionAPI>curl http://api.orderingestion.com:6000/health
+"Healthy"
