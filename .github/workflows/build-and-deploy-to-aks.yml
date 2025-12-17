@@ -99,7 +99,8 @@ jobs:
       # Login to Azure Container Registry (ACR)
       - name: Login to ACR
         run: |
-          echo ${{ secrets.ACR_PASSWORD }} | docker login $ACR_LOGIN_SERVER -u ${{ secrets.ACR_USERNAME }} --password-stdin
+          az acr login --name $ACR_LOGIN_SERVER
+          #echo ${{ secrets.ACR_PASSWORD }} | docker login $ACR_LOGIN_SERVER -u ${{ secrets.ACR_USERNAME }} --password-stdin
 
       # Build and push OrderIngestion API
       - name: Build & Push API Docker Image
