@@ -1,4 +1,4 @@
-name: CI/CD - Build, Lint, Test
+name: CI/CD - Terraform → Lint → Test → Docker Build & Push → AKS Deployment
 
 on:
   push:
@@ -14,6 +14,40 @@ env:
   NAMESPACE: orderingestion-api-prod
    
 jobs:
+  terraform:
+    name: Terraform Plan & Apply
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      # Authenticate to Azure
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        working-directory: ./infra
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: ./infra
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ./infra
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ./infra
+        run: terraform apply -auto-approve tfplan
+        
   build-and-deploy:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -55,12 +89,6 @@ jobs:
       #  with:
       #    config_file: .yamllint.yml
 
-        
-      # Login to Azure using Service Principal
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # Login to Azure Container Registry (ACR)
       - name: Login to ACR
