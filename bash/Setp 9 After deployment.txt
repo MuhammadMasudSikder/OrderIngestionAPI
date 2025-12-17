@@ -1,0 +1,3 @@
+kubectl get pods -n orderingestion
+kubectl get svc -n orderingestion
+kubectl get ingress -n orderingestion

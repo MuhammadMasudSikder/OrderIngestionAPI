@@ -38,10 +38,10 @@ jobs:
       - name: Run Unit Tests
         run: dotnet test --no-build --configuration Release --collect "XPlat Code Coverage"
 
-      # Lint C# Code
-      - name: C# Linting (dotnet format)
-        run: dotnet format --verify-no-changes
-        continue-on-error: true
+      ## Lint C# Code
+      #- name: C# Linting (dotnet format)
+      #  run: dotnet format --verify-no-changes
+      #  continue-on-error: true
 
       # Lint Dockerfile
       - name: Lint Dockerfile with hadolint
@@ -80,16 +80,8 @@ jobs:
           resource-group: ${{ env.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ env.AKS_CLUSTER_NAME }}
           
-      # Ensure namespace exists
-      - name: Ensure namespace exists
-        run: |
-          kubectl get namespace ${{ env.NAMESPACE }} || kubectl create namespace ${{ env.NAMESPACE }}
-
-      # Apply deployment manifest
-      - name: Apply deployment manifest
-        run: |
-          kubectl apply -f k8s/deployment.yaml -n ${{ env.NAMESPACE }}
       
+      # Deploy apps to AKS
       # Update deployment image
       - name: Update deployment image(Deploy API to AKS)
         run: |
@@ -99,3 +91,16 @@ jobs:
       - name: Check rollout status
         run: |
           kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }}
+          
+      # Ensure namespace exists
+      - name: Ensure namespace exists
+        run: |
+          kubectl get namespace ${{ env.NAMESPACE }} || kubectl create namespace ${{ env.NAMESPACE }}
+
+      # Apply deployment manifest
+      - name: Apply deployment manifest
+        run: |
+          kubectl apply -f k8s/self-signed-deployment.yaml -n ${{ env.NAMESPACE }}        
+          kubectl rollout restart deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }}
+          kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }}
+          

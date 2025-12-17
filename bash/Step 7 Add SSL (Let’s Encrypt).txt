@@ -1,0 +1,11 @@
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --set installCRDs=true
+
+C:\Windows\System32>kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+
+C:\Windows\System32>kubectl apply -f "C:\Users\Masud\source\repos\orderingestion\deployments\base\cluster-issuer.yaml"
+clusterissuer.cert-manager.io/letsencrypt-prod configured

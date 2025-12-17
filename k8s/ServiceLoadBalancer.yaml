@@ -10,7 +10,8 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-    - port: 80
-      targetPort: 80
+    - protocol: TCP
+      port: 6000       # public port
+      targetPort: 8080 # container port
   selector:
     app: orderingestion-api

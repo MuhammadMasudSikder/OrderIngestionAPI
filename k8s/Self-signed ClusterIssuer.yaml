@@ -1,0 +1,11 @@
+# -----------------------------
+# 3. self-signed Cluster issuer
+# -----------------------------
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+
+

@@ -1,0 +1,3 @@
+kubectl apply -f orderingestion-api-deployment.yaml
+kubectl apply -f orderingestion-ui-deployment.yaml
+kubectl apply -f orderingestion-ingress.yaml

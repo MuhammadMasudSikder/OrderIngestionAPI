@@ -1,0 +1,17 @@
+# -----------------------------
+# 3. self-signed certificate
+# -----------------------------
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: orderingestion-api-tls
+  namespace: orderingestion-api-prod
+spec:
+  secretName: orderingestion-api-tls-secret
+  commonName: api.local
+  dnsNames:
+    - api.local
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+

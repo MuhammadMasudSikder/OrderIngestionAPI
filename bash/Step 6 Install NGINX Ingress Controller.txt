@@ -1,0 +1,32 @@
+
+if not install helm:
+choco install kubernetes-helm -y
+
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+helm install orderingestion-ingress ingress-nginx/ingress-nginx --namespace orderingestion-ingress --create-namespace
+
+
+
+
+Get the external IP:
+kubectl get service ingress-nginx-controller -n orderingestion-ingress
+
+kubectl get service --namespace orderingestion-ingress orderingestion-ingress-ingress-nginx-controller --output wide --watch
+
+You need to ensure your ingress-nginx service maps external port 80/443 to container 80/443:
+
+helm upgrade orderingestion-ingress ingress-nginx/ingress-nginx --namespace orderingestion-ingress   --set controller.service.loadBalancerIP=20.187.188.225 --set controller.service.type=LoadBalancer --set controller.service.ports.http=80 --set controller.service.ports.https=443 --set controller.service.externalTrafficPolicy=Local
+
+
+
+
+Then map DNS:
+api.orderingestion.com  ->  <EXTERNAL-IP>
+www.orderingestion.com  ->  <EXTERNAL-IP>
+
+helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace
+
+
+
