@@ -20,7 +20,13 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
+        
+      #Terraform setup before any Terraform command.  
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.7.0
+          
       # Authenticate to Azure
       - name: Azure Login
         uses: azure/login@v2
