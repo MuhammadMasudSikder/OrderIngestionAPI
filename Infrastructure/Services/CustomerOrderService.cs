@@ -2,22 +2,25 @@ using Application.DTOs;
 using Dapper;
 using Domain.Entities;
 using Domain.Interfaces;
+using Infrastructure.Repositories;
 using Microsoft.CodeAnalysis;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Text.Json;
 
-namespace Infrastructure.Repositories;
+namespace Infrastructure.Services;
 
-public class OrderRepository : IOrderRepository
+public class CustomerOrderService : ICustomerOrderService
 {
-    private readonly IDbConnection _db;
-    private readonly ILogger<OrderRepository> _logger;
+    //private readonly IDbConnection _db;
+    private readonly ILogger<CustomerOrderService> _logger;
+    private readonly IRepository<Order> _orderRepository;
 
-    public OrderRepository(IDbConnection db, ILogger<OrderRepository> logger)
+    public CustomerOrderService(IRepository<Order> orderRepository, ILogger<CustomerOrderService> logger)//IDbConnection db,
     {
-        _db = db;
+        //_db = db;
+        _orderRepository = orderRepository;
         _logger = logger;
     }
 
@@ -25,11 +28,13 @@ public class OrderRepository : IOrderRepository
     {
         try
         {
-            var result = await _db.QueryAsync<dynamic>(
-                "CheckRequestIdempotency",
-                new { RequestId = requestId },
-                commandType: CommandType.StoredProcedure
-            );
+            //var result = await _db.QueryAsync<dynamic>(
+            //    "CheckRequestIdempotency",
+            //    new { RequestId = requestId },
+            //    commandType: CommandType.StoredProcedure
+            //);
+
+            var result = await _orderRepository.CheckIdempotency(requestId);
 
             var idempotencyRecord = result.FirstOrDefault();
 
@@ -37,7 +42,7 @@ public class OrderRepository : IOrderRepository
             {
                 _logger.LogInformation("Duplicate request detected: {RequestId}", requestId);
 
-                return await GetOrderByIdAsync((int)idempotencyRecord.OrderId);
+                return await GetOrderByIdAsync(idempotencyRecord.OrderId);
             }
 
             return null;
@@ -68,45 +73,58 @@ public class OrderRepository : IOrderRepository
 
             var itemsJson = JsonSerializer.Serialize(itemsWithTotal);
 
-            var parameters = new
-            {
-                RequestId = request.RequestId,
-                CustomerEmail = request.Customer.Email,
-                CustomerFirstName = request.Customer.FirstName,
-                CustomerLastName = request.Customer.LastName,
-                CustomerPhone = request.Customer.Phone,
-                Platform = request.Platform ?? "Unknown",
-                TotalAmount = totalAmount,
-                OrderItems = itemsJson
-            };
+            //var parameters = new 
+            //{
+            //    RequestId = request.RequestId,
+            //    CustomerEmail = request.Customer.Email,
+            //    CustomerFirstName = request.Customer.FirstName,
+            //    CustomerLastName = request.Customer.LastName,
+            //    CustomerPhone = request.Customer.Phone,
+            //    Platform = request.Platform ?? "Unknown",
+            //    TotalAmount = totalAmount,
+            //    OrderItems = itemsJson
+            //};
 
-            var orderResult = await _db.QueryAsync<OrderDto>(
-                "InsertOrder",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
+            var parameters = new DynamicParameters();
 
-            var orderData = orderResult.FirstOrDefault();
+            parameters.Add("RequestId", request.RequestId);
+            parameters.Add("CustomerEmail", request.Customer.Email);
+            parameters.Add("CustomerFirstName", request.Customer.FirstName);
+            parameters.Add("CustomerLastName", request.Customer.LastName);
+            parameters.Add("CustomerPhone", request.Customer.Phone);
+            parameters.Add("Platform", request.Platform ?? "Unknown");
+            parameters.Add("TotalAmount", totalAmount);
+            parameters.Add("OrderItems", itemsJson);
+
+            //var orderResult = await _db.QueryAsync<OrderDto>(
+            //    "InsertOrder",
+            //    parameters,
+            //    commandType: CommandType.StoredProcedure
+            //);
+
+            var orderResult = await _orderRepository.Add(parameters);
+
+            var orderData = orderResult;
             if (orderData == null)
             {
                 throw new InvalidOperationException("Failed to create order");
             }
 
-            _logger.LogInformation("Order created successfully. OrderId: {OrderId}", (int)orderData.OrderId);
+            _logger.LogInformation("Order created successfully. OrderId: {OrderId}", orderData.OrderId);
 
             //// Fetch complete order with items
             //var order = await GetOrderByIdAsync((int)orderData.OrderId);
             //return order ?? throw new InvalidOperationException("Failed to retrieve created order");
-            var order=new Order
+            var order = new Order
             (
-                (int)orderData.OrderId,
+                orderData.OrderId,
                 orderData.RequestId,
                 new Customer
                 (
-                    orderData.Email,
-                    orderData.FirstName,
-                    orderData.LastName,
-                    orderData.Phone
+                    "orderData.Email",
+                    "orderData.FirstName",
+                    "orderData.LastName",
+                    "orderData.Phone"
                 ),
                 request.Items,
                 orderData.Platform
@@ -138,12 +156,12 @@ public class OrderRepository : IOrderRepository
     {
         try
         {
-            using var multi = await _db.QueryMultipleAsync(
-                "GetOrderById",
-                new { OrderId = orderId },
-                commandType: CommandType.StoredProcedure
-            );
-
+            //using var multi = await _db.QueryMultipleAsync(
+            //    "GetOrderById",
+            //    new { OrderId = orderId },
+            //    commandType: CommandType.StoredProcedure
+            //);
+            var multi = await _orderRepository.GetById(orderId);
             var orderData = await multi.ReadFirstOrDefaultAsync<dynamic>();
             if (orderData == null)
             {
@@ -176,24 +194,24 @@ public class OrderRepository : IOrderRepository
         }
     }
 
-    public async Task SaveRawPayloadAsync(Order raw, CancellationToken ct = default)
-    {
-        try
-        {
-            var parameters = new DynamicParameters();
-            parameters.Add("@RequestId", raw.RequestId);
-            parameters.Add("@Payload", raw.ToString());
+    //public async Task SaveRawPayloadAsync(Order raw, CancellationToken ct = default)
+    //{
+    //    try
+    //    {
+    //        var parameters = new DynamicParameters();
+    //        parameters.Add("@RequestId", raw.RequestId);
+    //        parameters.Add("@Payload", raw.ToString());
 
-            await _db.ExecuteAsync(
-                "sp_SaveOrderRaw",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error Save Raw Payload: {RequestId}", raw.RequestId);
-            throw;
-        }
-    }
+    //        await _db.ExecuteAsync(
+    //            "sp_SaveOrderRaw",
+    //            parameters,
+    //            commandType: CommandType.StoredProcedure
+    //        );
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError(ex, "Error Save Raw Payload: {RequestId}", raw.RequestId);
+    //        throw;
+    //    }
+    //}
 }

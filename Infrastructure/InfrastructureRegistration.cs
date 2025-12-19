@@ -34,13 +34,16 @@ namespace Infrastructure
             //Console.WriteLine(config["RabbitMQ:Host"]);
 
             // Repositories
-            services.AddScoped<IOrderRepository, OrderRepository>();
+            services.AddScoped<ICustomerOrderService, CustomerOrderService>();
 
             // External Services
             services.AddScoped<ILogisticsGateway, MockLogisticsGateway>();
 
             // Business Services
             services.AddScoped<IOrderService, OrderService>(); // fix
+
+            // Generic Repository
+            services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
             // MassTransit
             services.AddMassTransit(x =>

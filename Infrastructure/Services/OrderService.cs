@@ -14,11 +14,11 @@ namespace Infrastructure.Services
     {
         private readonly ILogger<OrderService> _logger;
         private readonly IPublishEndpoint _publish;
-        private readonly IOrderRepository _repo;
+        private readonly ICustomerOrderService _repo;
 
-        public OrderService(IOrderRepository repo,
+        public OrderService(ICustomerOrderService repo,
             IPublishEndpoint publish,
-            IOrderRepository orderRepository,
+            ICustomerOrderService orderRepository,
             ILogisticsGateway logisticsGateway,
             ILogger<OrderService> logger)
         {

@@ -19,7 +19,7 @@ rules:
     indent-sequences: true
     check-multi-line-strings: false
 
-  trailing-spaces:
+  trailing-spaces: disable
     level: warning
 
   empty-lines:

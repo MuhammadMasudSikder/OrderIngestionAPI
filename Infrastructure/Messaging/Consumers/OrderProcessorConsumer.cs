@@ -14,11 +14,11 @@ namespace Infrastructure.Messaging.Consumers;
 
 public class OrderProcessorConsumer : IConsumer<IIngestOrderMessage>
 {
-    private readonly IOrderRepository _repo;
+    private readonly ICustomerOrderService _repo;
     private readonly ILogger<OrderProcessorConsumer> _logger;
     private readonly ILogisticsGateway _logistics;
 
-    public OrderProcessorConsumer(IOrderRepository repo, ILogger<OrderProcessorConsumer> logger, ILogisticsGateway logistics)
+    public OrderProcessorConsumer(ICustomerOrderService repo, ILogger<OrderProcessorConsumer> logger, ILogisticsGateway logistics)
     {
         _repo = repo;
         _logger = logger;

@@ -14,15 +14,13 @@ namespace Application.Handlers
     {
         private readonly ILogger<IngestOrderCommandHandler> _logger;
         private readonly IPublishEndpoint _publish;
-        private readonly IOrderRepository _repo;
+        private readonly ICustomerOrderService _orderService;
 
-        public IngestOrderCommandHandler(IOrderRepository repo,
+        public IngestOrderCommandHandler(ICustomerOrderService orderService,
             IPublishEndpoint publish,
-            IOrderRepository orderRepository,
-            ILogisticsGateway logisticsGateway,
             ILogger<IngestOrderCommandHandler> logger)
         {
-            _repo = repo;
+            _orderService = orderService;
             _publish = publish;
             _logger = logger;
         }
@@ -36,7 +34,7 @@ namespace Application.Handlers
                 _logger.LogInformation("Processing order creation request. RequestId: {RequestId}", request.RequestId);
 
                 //Check if order already exists (idempotency)
-                var existingOrder = await _repo.CheckIdempotencyAsync(request.RequestId);
+                var existingOrder = await _orderService.CheckIdempotencyAsync(request.RequestId);
                 if (existingOrder != null)
                 {
                     _logger.LogInformation("Duplicate request detected. Returning existing order. RequestId: {RequestId}, OrderId: {OrderId}",
@@ -79,7 +77,7 @@ namespace Application.Handlers
                 );
 
                 //If not exists, create new order
-                var newOrder = await _repo.CreateOrderAsync(order);
+                var newOrder = await _orderService.CreateOrderAsync(order);
 
                 if (newOrder != null)
                 {

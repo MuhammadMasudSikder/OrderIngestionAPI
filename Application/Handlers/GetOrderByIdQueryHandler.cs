@@ -8,18 +8,18 @@ namespace Application.Handlers
     public class GetOrderByIdQueryHandler
     : IRequestHandler<GetOrderByIdQuery, Order>
     {
-        private readonly IOrderRepository _repo;
+        private readonly ICustomerOrderService _orderService;
 
-        public GetOrderByIdQueryHandler(IOrderRepository repo)
+        public GetOrderByIdQueryHandler(ICustomerOrderService orderService)
         {
-            _repo = repo;
+            _orderService = orderService;
         }
 
         public async Task<Order> Handle(
             GetOrderByIdQuery request,
             CancellationToken cancellationToken)
         {
-            var order = await _repo.GetOrderByIdAsync(request.OrderId, cancellationToken);
+            var order = await _orderService.GetOrderByIdAsync(request.OrderId, cancellationToken);
             if (order == null)
             {
                 throw new Exception($"Order with ID {request.OrderId} not found.");
